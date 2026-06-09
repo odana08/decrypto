@@ -7,6 +7,8 @@ from typing import Any, Dict, List, Set
 
 import pandas as pd
 
+from src.predict_wallet import load_feature_columns, load_model
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 
@@ -47,55 +49,86 @@ def _class_label(value: Any) -> str:
         return "unknown"
 
 
-def _risk_score_for_row(row: pd.Series) -> float:
-    label = row["class_label"]
-    base = 0.92 if label == "illicit" else 0.18 if label == "licit" else 0.45
-
-    tx_signal = _clamp(float(row.get("total_txs", 0.0)) / 150.0, 0.0, 1.0)
-    volume_signal = _clamp(float(row.get("btc_transacted_total", 0.0)) / 25.0, 0.0, 1.0)
-    exposure_signal = _clamp(float(row.get("transacted_w_address_total", 0.0)) / 20.0, 0.0, 1.0)
-    repeat_signal = _clamp(float(row.get("num_addr_transacted_multiple", 0.0)) / 8.0, 0.0, 1.0)
-    fee_signal = _clamp(float(row.get("fees_as_share_max", 0.0)) / 0.01, 0.0, 1.0)
-
-    if label == "illicit":
-        score = base + 0.03 * tx_signal + 0.02 * volume_signal + 0.03 * repeat_signal
-    elif label == "unknown":
-        score = base + 0.12 * exposure_signal + 0.10 * repeat_signal + 0.08 * fee_signal
-    else:
-        score = base + 0.05 * tx_signal + 0.03 * exposure_signal - 0.05 * fee_signal
-
-    return round(_clamp(score, 0.05, 0.99), 4)
-
-
 def _primary_flag(row: pd.Series) -> str:
-    if row["class_label"] == "illicit":
+    if row["risk_label"] == "illicit":
         if float(row.get("num_addr_transacted_multiple", 0.0)) >= 4:
             return "Repeated routing"
         if float(row.get("fees_as_share_max", 0.0)) >= 0.003:
             return "Fee anomalies"
-        return "Known illicit class"
+        if float(row.get("transacted_w_address_total", 0.0)) >= 15:
+            return "Broad counterparty exposure"
+        return "Model-classified illicit"
 
-    if row["class_label"] == "unknown":
+    if row["dataset_class_label"] == "unknown":
         if float(row.get("transacted_w_address_total", 0.0)) >= 15:
             return "Broad counterparty exposure"
         if float(row.get("btc_transacted_total", 0.0)) >= 10:
             return "High throughput wallet"
-        return "Unlabelled high-activity wallet"
+        return "Unlabelled wallet"
 
-    return "Low observed risk"
+    return "Model-classified low risk"
+
+
+def _feature_store_column_map() -> Dict[str, str]:
+    header = pd.read_csv(FEATURES_PATH, nrows=0)
+    clean_header = _clean_columns(header)
+    return dict(zip(clean_header.columns, header.columns))
+
+
+def _model_feature_frame(df: pd.DataFrame, feature_columns: List[str]) -> pd.DataFrame:
+    feature_frame = df.copy()
+    for column in feature_columns:
+        if column not in feature_frame.columns:
+            feature_frame[column] = 0.0
+        feature_frame[column] = pd.to_numeric(feature_frame[column], errors="coerce").fillna(0.0)
+    return feature_frame[feature_columns]
+
+
+def _score_dataset_with_model(df: pd.DataFrame, feature_columns: List[str]) -> pd.DataFrame:
+    model = load_model()
+    if model is None:
+        raise RuntimeError("Wallet classifier model is unavailable. Train it before building the network summary.")
+
+    feature_frame = _model_feature_frame(df, feature_columns)
+    predictions = model.predict(feature_frame)
+    df = df.copy()
+    df["prediction"] = [int(value) for value in predictions]
+
+    if hasattr(model, "predict_proba"):
+        probabilities = model.predict_proba(feature_frame)
+        classes = list(getattr(model, "classes_", []))
+        first_row = probabilities[0] if len(probabilities) else []
+        illicit_index = classes.index(1) if 1 in classes else min(1, len(first_row) - 1)
+        df["risk_score"] = [
+            round(_clamp(float(row[illicit_index]), 0.0, 1.0), 4)
+            for row in probabilities
+        ]
+    else:
+        df["risk_score"] = [round(_clamp(float(value), 0.0, 1.0), 4) for value in predictions]
+
+    df["risk_label"] = df["prediction"].map(lambda value: "illicit" if int(value) == 1 else "licit")
+    return df
 
 
 @lru_cache(maxsize=1)
 def load_network_dataset() -> pd.DataFrame:
-    features = pd.read_csv(FEATURES_PATH, usecols=RAW_FEATURE_COLUMNS)
+    feature_columns = load_feature_columns()
+    column_map = _feature_store_column_map()
+    requested_columns = ["address"]
+    for column in sorted(set(feature_columns + RAW_FEATURE_COLUMNS)):
+        raw_name = column_map.get(column)
+        if raw_name and raw_name not in requested_columns:
+            requested_columns.append(raw_name)
+
+    features = pd.read_csv(FEATURES_PATH, usecols=requested_columns)
     features = _clean_columns(features)
 
     classes = pd.read_csv(CLASSES_PATH)
     classes = _clean_columns(classes)
 
     df = features.merge(classes, on="address", how="left")
-    df["class_label"] = df["class"].map(_class_label)
-    df["risk_score"] = df.apply(_risk_score_for_row, axis=1)
+    df["dataset_class_label"] = df["class"].map(_class_label)
+    df = _score_dataset_with_model(df, feature_columns)
     df["primary_flag"] = df.apply(_primary_flag, axis=1)
     return df
 
@@ -126,7 +159,8 @@ def _build_ranked_entities(df: pd.DataFrame, limit: int = 12) -> List[Dict[str, 
             {
                 "address": row["address"],
                 "risk_score": float(row["risk_score"]),
-                "risk_label": row["class_label"],
+                "risk_label": row["risk_label"],
+                "dataset_class_label": row["dataset_class_label"],
                 "entity_type": "wallet",
                 "primary_flag": row["primary_flag"],
                 "volume_btc": float(row.get("btc_transacted_total", 0.0) or 0.0),
@@ -269,13 +303,32 @@ def _build_network_summary_cached() -> Dict[str, Any]:
             "message": "Place the Elliptic dataset CSV files in backend/data/ to enable network scanning.",
         }
 
-    df = load_network_dataset()
+    try:
+        df = load_network_dataset()
+    except RuntimeError as exc:
+        return {
+            "wallets_scanned": 0,
+            "flagged_wallets": 0,
+            "flagged_pct": 0.0,
+            "licit_wallets": 0,
+            "unknown_wallets": 0,
+            "network_risk_index": 0.0,
+            "suspicious_tx_count": 0,
+            "counterparty_exposure": 0,
+            "repeat_counterparty_wallets": 0,
+            "median_flagged_volume_btc": 0.0,
+            "ranked_entities": [],
+            "graph": {"nodes": [], "edges": []},
+            "scan_timestamp": int(time.time()),
+            "data_source": "unavailable",
+            "message": str(exc),
+        }
 
     wallets_scanned = int(len(df))
-    flagged_mask = df["class_label"] == "illicit"
+    flagged_mask = df["risk_label"] == "illicit"
     flagged_wallets = int(flagged_mask.sum())
-    licit_wallets = int((df["class_label"] == "licit").sum())
-    unknown_wallets = int((df["class_label"] == "unknown").sum())
+    licit_wallets = int((df["risk_label"] == "licit").sum())
+    unknown_wallets = int((df["dataset_class_label"] == "unknown").sum())
     flagged_pct = round((flagged_wallets / wallets_scanned) * 100, 2) if wallets_scanned else 0.0
     flagged_risk_mean = float(df.loc[flagged_mask, "risk_score"].mean()) if flagged_wallets else 0.0
     network_risk_index = round(
@@ -313,19 +366,19 @@ def _build_network_summary_cached() -> Dict[str, Any]:
         "scan_timestamp": int(time.time()),
         "data_source": "local_dataset",
         "message": (
-            f"Scanned {wallets_scanned:,} labelled wallets from the Elliptic dataset. "
-            f"Top entities are ranked by dataset label plus behavioural intensity."
+            f"Scanned {wallets_scanned:,} wallets from the local dataset. "
+            f"Top entities are ranked by classifier risk probability plus behavioural intensity."
         ),
         "summary_cards": [
             {
                 "label": "Flagged wallets",
                 "value": flagged_wallets,
-                "detail": f"{flagged_pct:.2f}% of labelled wallets",
+                "detail": f"{flagged_pct:.2f}% classified by the model",
             },
             {
                 "label": "Median flagged volume",
                 "value": _format_btc(median_flagged_volume_btc),
-                "detail": "Across illicit-labelled wallets",
+                "detail": "Across model-classified illicit wallets",
             },
         ],
     }

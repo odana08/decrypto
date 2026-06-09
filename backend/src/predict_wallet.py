@@ -3,7 +3,6 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 import json
-import math
 from typing import Dict, List, Optional, Tuple
 
 import joblib
@@ -284,41 +283,16 @@ def _empty_feature_frame(feature_columns: List[str]) -> pd.DataFrame:
     return df
 
 
-def _heuristic_risk_score(features: Dict[str, float], watchlist_match: Optional[Dict[str, object]]) -> float:
-    total_txs = safe_float(features.get("total_txs", 0.0), minimum=0.0)
-    total_volume = safe_float(features.get("btc_transacted_total", 0.0), minimum=0.0)
-    counterparties = safe_float(features.get("transacted_w_address_total", 0.0), minimum=0.0)
-    repeat_counterparties = safe_float(features.get("num_addr_transacted_multiple", 0.0), minimum=0.0)
-    fee_share_max = safe_float(features.get("fees_as_share_max", 0.0), minimum=0.0)
-
-    score = 0.05
-    score += min(0.18, math.log10(total_txs + 1) / 10)
-    score += min(0.18, math.log10(total_volume + 1) / 12)
-    score += min(0.16, counterparties / 80.0)
-    score += min(0.12, repeat_counterparties / 20.0)
-    score += min(0.10, fee_share_max * 2.0)
-
-    if watchlist_match:
-        score = max(score, safe_float(watchlist_match.get("risk_score", 0.95), minimum=0.0, maximum=1.0))
-
-    return clamp(score, 0.0, 0.99)
-
-
-def _risk_label_from_score(score: float) -> str:
-    if score >= 0.75:
-        return "illicit"
-    if score >= 0.45:
-        return "review"
-    return "licit"
-
-
 def _predict_with_model(model, feature_row: pd.DataFrame) -> Tuple[int, float, str]:
     if model is None:
         raise RuntimeError("Prediction model is unavailable.")
 
     prediction = int(model.predict(feature_row)[0])
     if hasattr(model, "predict_proba"):
-        probability = model.predict_proba(feature_row)[0][1]
+        probabilities = model.predict_proba(feature_row)[0]
+        classes = list(getattr(model, "classes_", []))
+        illicit_index = classes.index(1) if 1 in classes else min(1, len(probabilities) - 1)
+        probability = probabilities[illicit_index]
         risk_score = clamp(probability, 0.0, 1.0)
     else:
         risk_score = clamp(prediction, 0.0, 1.0)
@@ -353,11 +327,7 @@ def predict_wallet(address: str) -> dict:
     try:
         prediction, risk_score, risk_label = _predict_with_model(model, feature_row)
     except Exception as exc:
-        warnings.append(f"Model fallback used: {exc}")
-        risk_score = _heuristic_risk_score(features, watchlist_match)
-        risk_label = _risk_label_from_score(risk_score)
-        prediction = 1 if risk_label == "illicit" else 0
-        feature_source = f"{feature_source}+heuristic"
+        raise RuntimeError(f"Wallet classifier is unavailable: {exc}") from exc
 
     if watchlist_match:
         risk_score = max(risk_score, safe_float(watchlist_match.get("risk_score", 0.95), minimum=0.0, maximum=1.0))

@@ -93,6 +93,57 @@ Without these files the network scan endpoint returns a graceful `data_source: "
 
 ---
 
+## CI/CD And Model Quality
+
+GitHub Actions runs the full system checks on pull requests and pushes to `main`:
+
+```text
+.github/workflows/ci.yml
+```
+
+The pipeline runs backend tests, frontend lint/build, and a model quality gate. The model gate evaluates `backend/models/btc_live_random_forest.joblib` against the labelled wallet dataset using the saved feature contract in `backend/models/btc_live_feature_columns.json`.
+
+Required CI files:
+
+```text
+backend/data/wallets_features.csv
+backend/data/wallets_classes.csv
+backend/models/btc_live_random_forest.joblib
+backend/models/btc_live_feature_columns.json
+```
+
+Because the dataset and `.joblib` artifact are usually private or too large for normal Git, the workflow can also restore them from zip archives using repository secrets:
+
+```text
+MODEL_DATA_ARCHIVE_URL       # zip containing wallets_features.csv and wallets_classes.csv
+MODEL_ARTIFACT_ARCHIVE_URL   # zip containing btc_live_random_forest.joblib
+```
+
+The default model thresholds are:
+
+```text
+MODEL_MIN_ILLICIT_F1=0.75
+MODEL_MIN_ILLICIT_RECALL=0.70
+MODEL_MIN_ROC_AUC=0.80
+```
+
+To retrain and evaluate the classifier manually, run the `Train And Evaluate Model` workflow:
+
+```text
+.github/workflows/model-training.yml
+```
+
+If the quality gate passes, the workflow uploads the generated model artifacts. Commit or publish the approved artifacts according to your release process.
+
+Deployment from `main` is gated behind all CI jobs. Configure these repository secrets to enable deploy hooks:
+
+```text
+RAILWAY_DEPLOY_HOOK_URL
+VERCEL_DEPLOY_HOOK_URL
+```
+
+---
+
 ## API Reference
 
 | Method | Path | Description |
@@ -122,4 +173,3 @@ Without these files the network scan endpoint returns a graceful `data_source: "
 | Backend | FastAPI, Uvicorn, pandas, scikit-learn, joblib, requests, python-dotenv |
 | Data sources | mempool.space Bitcoin API, Elliptic dataset, Google Gemini AI |
 | Chain | Bitcoin (mainnet) |
-

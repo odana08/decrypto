@@ -1,0 +1,77 @@
+name: Train And Evaluate Model
+
+on:
+  workflow_dispatch:
+    inputs:
+      min_illicit_f1:
+        description: Minimum illicit-class F1 required to publish artifacts
+        required: true
+        default: "0.75"
+      min_illicit_recall:
+        description: Minimum illicit-class recall required to publish artifacts
+        required: true
+        default: "0.70"
+      min_roc_auc:
+        description: Minimum ROC AUC required to publish artifacts
+        required: true
+        default: "0.80"
+
+permissions:
+  contents: read
+
+jobs:
+  train-and-evaluate:
+    name: Train And Evaluate
+    runs-on: ubuntu-latest
+
+    env:
+      MODEL_MIN_ILLICIT_F1: ${{ inputs.min_illicit_f1 }}
+      MODEL_MIN_ILLICIT_RECALL: ${{ inputs.min_illicit_recall }}
+      MODEL_MIN_ROC_AUC: ${{ inputs.min_roc_auc }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install model dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Restore private training data
+        env:
+          MODEL_DATA_ARCHIVE_URL: ${{ secrets.MODEL_DATA_ARCHIVE_URL }}
+        run: |
+          if [ -z "$MODEL_DATA_ARCHIVE_URL" ]; then
+            echo "MODEL_DATA_ARCHIVE_URL is not configured; using checked-out backend/data files."
+            exit 0
+          fi
+          curl -fsSL "$MODEL_DATA_ARCHIVE_URL" -o /tmp/model-data.zip
+          unzip -o /tmp/model-data.zip -d backend/data
+
+      - name: Train classifier
+        working-directory: backend
+        run: python src/train_live_model.py
+
+      - name: Evaluate classifier
+        run: python backend/scripts/evaluate_model.py
+
+      - name: Upload model artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: btc-wallet-classifier
+          path: |
+            backend/models/btc_live_random_forest.joblib
+            backend/models/btc_live_feature_columns.json
+            backend/models/btc_live_feature_importance.csv
+          if-no-files-found: error

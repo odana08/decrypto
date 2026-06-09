@@ -110,6 +110,21 @@ def make_valid_bech32_address():
     return encoded
 
 
+class FakeWalletClassifier:
+    classes_ = [0, 1]
+
+    def predict(self, feature_row):
+        return [1 if float(row.get("btc_transacted_total", 0.0)) >= 100.0 else 0 for _, row in feature_row.iterrows()]
+
+    def predict_proba(self, feature_row):
+        probabilities = []
+        for _, row in feature_row.iterrows():
+            volume = float(row.get("btc_transacted_total", 0.0))
+            risk_score = min(0.95, max(0.05, volume / 200.0))
+            probabilities.append([1.0 - risk_score, risk_score])
+        return probabilities
+
+
 class WalletHardeningTests(unittest.TestCase):
     maxDiff = None
 
@@ -136,7 +151,7 @@ class WalletHardeningTests(unittest.TestCase):
 
     def _common_patches(self):
         return [
-            patch("src.predict_wallet.load_model", return_value=None),
+            patch("src.predict_wallet.load_model", return_value=FakeWalletClassifier()),
             patch("src.predict_wallet.get_cached_features", return_value=None),
             patch("src.predict_wallet.load_feature_importance", return_value=self.importance_df),
             patch("src.predict_wallet.summarize_wallet", return_value="Controlled fallback summary."),
