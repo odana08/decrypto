@@ -18,7 +18,7 @@ export default function TransactionTable({ transactions }) {
     <div className="flex flex-col h-full">
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-2.5"
         style={{ borderBottom: '1px solid rgba(139,92,246,0.08)' }}>
-        <div className="text-[11px] font-mono uppercase tracking-widest text-slate-500">Transaction History</div>
+        <div className="text-[11px] font-mono uppercase tracking-widest text-slate-500">Source Transactions</div>
         <div className="text-[10px] font-mono text-slate-600">{transactions.length} records</div>
       </div>
 
@@ -29,8 +29,8 @@ export default function TransactionTable({ transactions }) {
         }}>
         <span>Timestamp</span>
         <span>Dir</span>
-        <span>Counterparty</span>
-        <span className="text-right">Amount</span>
+        <span>Inferred Party</span>
+        <span className="text-right">Est. Amount</span>
         <span>Token</span>
         <span>Category</span>
         <span>Risk Flag</span>

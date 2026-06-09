@@ -23,7 +23,7 @@ const RISK_WEIGHT = {
 };
 
 const LEGEND_ITEMS = [
-  { label: 'Source', color: '#f8fafc' },
+  { label: 'Input side', color: '#f8fafc' },
   { label: 'Intermediate', color: '#60a5fa' },
   { label: 'Exchange', color: '#fbbf24' },
   { label: 'Mixer', color: '#c084fc' },
@@ -57,9 +57,9 @@ function getNodeMeaning(node, column, centerAddress) {
   if (node.type === 'exchange' || node.type === 'bridge') return 'Exchange';
   if (node.type === 'mixer') return 'Mixer';
   if (isHighRiskNode(node)) return 'Flagged wallet';
-  if (column === 'source') return 'Source wallet';
+  if (column === 'source') return 'Input-side wallet';
   if (column === 'routing') return 'Intermediate wallet';
-  return ENTITY_LABELS[node.type] ?? 'Destination wallet';
+  return ENTITY_LABELS[node.type] ?? 'Output-side wallet';
 }
 
 function getNodeVisual(node, column, centerAddress) {
@@ -390,7 +390,7 @@ function FocusCard({ focusedNode, focusedPath, centerAddress, locked, className 
     ? shortAddr(focusedNode.aliasOf ?? focusedNode.id)
     : focusedPath
       ? `${shortAddr(focusedPath.source.aliasOf ?? focusedPath.sourceId)} -> ${shortAddr(focusedPath.destination.aliasOf ?? focusedPath.destinationId)}`
-      : 'Primary flow';
+      : 'Primary inferred path';
 
   const subtitle = focusedNode
     ? getNodeMeaning(focusedNode, focusedNode.column, centerAddress)
@@ -556,10 +556,10 @@ export default function WalletGraph({ nodes = [], links = [], onNodeClick, selec
         />
 
         <div className="absolute left-6 top-5 z-20">
-          <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-slate-500">Investigation flow</div>
-          <div className="mt-2 text-lg font-medium text-slate-100">Funds staged into a readable path view</div>
+          <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-slate-500">Relationship inference</div>
+          <div className="mt-2 text-lg font-medium text-slate-100">Observed transactions arranged into inferred paths</div>
           <div className="mt-1 text-sm text-slate-500">
-            Showing {graph.paths.length} key path{graph.paths.length === 1 ? '' : 's'} and hiding {graph.hiddenNodeCount} low-priority nodes for clarity.
+            Showing {graph.paths.length} key inferred path{graph.paths.length === 1 ? '' : 's'} and hiding {graph.hiddenNodeCount} low-priority nodes for clarity.
           </div>
         </div>
 
@@ -591,7 +591,7 @@ export default function WalletGraph({ nodes = [], links = [], onNodeClick, selec
             fill="rgba(148,163,184,0.72)"
             style={{ opacity: labelReveal }}
           >
-            Source wallets
+            Input side
           </motion.text>
           <motion.text
             x={COLUMN_X.routing}
@@ -613,7 +613,7 @@ export default function WalletGraph({ nodes = [], links = [], onNodeClick, selec
             fill="rgba(148,163,184,0.72)"
             style={{ opacity: labelReveal }}
           >
-            Destination
+            Output side
           </motion.text>
 
           <g>

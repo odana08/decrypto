@@ -28,7 +28,6 @@ export function shortAddr(address) {
 export function detectChain(address) {
   if (!address) return 'Bitcoin';
   if (address.startsWith('bc1')) return 'Bitcoin (SegWit)';
-  if (address.startsWith('0x')) return 'Ethereum';
   return 'Bitcoin';
 }
 
@@ -96,10 +95,10 @@ function summariseCounterparty(type, riskLevel, volume, txCount) {
   const txText = `${txCount ?? 0} tx${txCount === 1 ? '' : 's'}`;
 
   if (riskLevel === 'critical' || riskLevel === 'high') {
-    return `${entityLabel} with elevated exposure: ${txText} totalling ${volumeText}. Review this flow closely.`;
+    return `${entityLabel} with elevated inferred exposure: ${txText} totalling an estimated ${volumeText}. Review the underlying transactions.`;
   }
 
-  return `${entityLabel} observed across ${txText} with ${volumeText} in traced flow.`;
+  return `${entityLabel} observed across ${txText} with an estimated ${volumeText} in related transaction activity.`;
 }
 
 function deriveEdgeRisk(edge, walletRiskScore, maxVolume, maxTxCount) {
@@ -384,7 +383,7 @@ export function deriveAlerts(walletRiskRaw) {
       id: 'risk-classification',
       severity: level,
       title: `Wallet classified as ${titleCase(walletRiskRaw.risk_label ?? level)}`,
-      description: `ML risk score ${riskScoreToDisplay(score)}/100. This wallet exhibits patterns consistent with elevated AML risk.`,
+      description: `ML risk score ${riskScoreToDisplay(score)}/100 based on the available wallet features. Treat this as a screening result, not proof of wrongdoing.`,
       timestamp: new Date().toISOString(),
     });
   }
@@ -421,7 +420,7 @@ export function deriveAlerts(walletRiskRaw) {
       id: 'no-alerts',
       severity: 'info',
       title: 'No high-risk indicators detected',
-      description: 'This wallet does not show significant patterns associated with illicit activity.',
+      description: 'The available model features do not show strong elevated-risk indicators.',
       timestamp: new Date().toISOString(),
     });
   }
@@ -450,5 +449,8 @@ export function deriveTimelineData(txRows) {
 
   return Object.values(byMonth)
     .sort((a, b) => a.key.localeCompare(b.key))
-    .map(({ key, ...rest }) => rest);
+    .map((item) => {
+      const { key: _timelineKey, ...rest } = item;
+      return rest;
+    });
 }

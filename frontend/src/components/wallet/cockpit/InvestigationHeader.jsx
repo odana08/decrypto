@@ -19,7 +19,7 @@ export default function InvestigationHeader({
           </h1>
 
           <p className="mt-2 max-w-3xl text-[14px] leading-6 text-slate-500">
-            {primaryFinding ?? 'Tracing fund flow, ranking counterparties, and scoring wallet behavior from live on-chain activity.'}
+            {primaryFinding ?? 'Scoring wallet behavior, ranking inferred counterparties, and estimating relationships from live on-chain transaction inputs and outputs.'}
           </p>
         </div>
       </div>

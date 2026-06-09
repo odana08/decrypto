@@ -3,35 +3,35 @@ import { ENTITY_COLORS, RISK_COLORS, ENTITY_LABELS } from '../../constants';
 const getId = (ref) => (ref && typeof ref === 'object') ? ref.id : ref;
 
 function getNodeInterpretation(node) {
-  if (node.isCenter) return 'Primary investigation target. Hub of all detected suspicious flows.';
+  if (node.isCenter) return 'Primary investigation target. Relationships are inferred from observed transaction inputs and outputs.';
 
   const lines = {
     mixer:
-      'Obfuscation service. Funds routed through here lose traceability — strong AML flag.',
+      'Possible obfuscation-related entity type in the visible graph. Review the source transactions before drawing conclusions.',
     sanctioned:
-      'Directly designated on OFAC SDN or equivalent sanctions list. Any interaction constitutes a compliance violation.',
+      'Matched a configured high-risk entity type or local watchlist signal. Confirm externally before treating this as a sanctions finding.',
     exchange:
-      'Centralised exchange. Likely cash-out or fiat conversion point for illicit proceeds.',
+      'Centralised exchange-style entity type. Relationship is inferred from observed transaction structure.',
     bridge:
-      'Cross-chain bridge. Funds moved here may evade chain-specific AML monitoring systems.',
+      'Bridge-style entity type. Relationship is inferred from observed transaction structure.',
     darknet:
-      'Linked to darknet marketplace infrastructure. Funds likely represent illicit proceeds from criminal activity.',
+      'Darknet-related entity type in the visible graph. Treat as a screening signal for review.',
     ransomware:
-      'Attributed to an active ransomware operation. Funds represent ransom payments from victims.',
+      'Ransomware-related entity type in the visible graph. Treat as a screening signal for review.',
     scam_cluster:
-      'Part of a phishing or rug-pull fraud cluster. Funds originate from defrauded victims.',
+      'Fraud-related entity type in the visible graph. Treat as a screening signal for review.',
     laundering:
-      'Key node in multi-hop layering chain. Rapid pass-through pattern indicates active laundering operation.',
+      'Multi-hop routing pattern in the visible graph. This indicates review priority, not proof of laundering.',
     high_risk_service:
-      'Unregistered cash-out service operating without KYC/AML controls. Common exit point for illicit flows.',
+      'High-risk service entity type in the visible graph. Confirm with source evidence before escalation.',
     escrow:
-      'Darknet escrow smart contract associated with illicit marketplace activity.',
+      'Escrow-style entity type in the visible graph.',
     contract:
-      'Unverified smart contract with obfuscation routing behaviour. No source code available.',
+      'Contract-style entity type in the visible graph.',
     wallet:
       node.riskScore > 70
-        ? 'High-risk intermediary wallet. Exhibits rapid pass-through pattern consistent with layering.'
-        : 'Unknown wallet. Insufficient transaction history to classify with confidence.',
+        ? 'Higher-risk wallet based on model and graph signals. Review source transactions.'
+        : 'Wallet observed in inferred relationships. Insufficient context for a strong conclusion.',
   };
 
   return lines[node.type] || 'Unknown entity type. Further manual investigation required.';

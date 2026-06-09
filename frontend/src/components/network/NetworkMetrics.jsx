@@ -15,7 +15,7 @@ export default function NetworkMetrics({ metrics }) {
       <MetricCard
         label="Flagged Wallets"
         value={metrics.flaggedWallets}
-        sub={`${metrics.flaggedPct} of total`}
+        sub={`${metrics.flaggedPct} model-classified`}
         accent="orange"
         icon={Flag}
       />
@@ -27,16 +27,16 @@ export default function NetworkMetrics({ metrics }) {
         icon={TrendingUp}
       />
       <MetricCard
-        label="Suspicious Txs"
+        label="Flagged-Wallet Txs"
         value={metrics.suspiciousTxCount}
-        sub="flagged-wallet activity"
+        sub="dataset activity"
         accent="yellow"
         icon={TrendingUp}
       />
       <MetricCard
         label="Counterparty Links"
         value={metrics.counterpartyExposure}
-        sub="flagged-wallet exposure"
+        sub="dataset edge exposure"
         accent="red"
         icon={ShieldOff}
       />
@@ -57,7 +57,7 @@ export default function NetworkMetrics({ metrics }) {
       <MetricCard
         label="Graph Edges"
         value={metrics.graphEdgeCount}
-        sub="sampled relationships"
+        sub="sampled dataset links"
         accent="purple"
         icon={GitBranch}
       />

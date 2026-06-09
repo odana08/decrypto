@@ -6,8 +6,8 @@ import {
 } from 'lucide-react';
 
 const NAV_SECTIONS = [
-  { key: 'transactions', label: 'Transactions', icon: Rows3, countKey: 'txCount' },
-  { key: 'counterparties', label: 'Counterparties', icon: Users, countKey: 'counterparties' },
+  { key: 'transactions', label: 'Source Txs', icon: Rows3, countKey: 'txCount' },
+  { key: 'counterparties', label: 'Inferred Parties', icon: Users, countKey: 'counterparties' },
   { key: 'activity', label: 'Activity', icon: Activity },
   { key: 'alerts', label: 'Alerts', icon: AlertTriangle, countKey: 'alerts' },
 ];

@@ -71,7 +71,7 @@ function BehaviouralSignals({ signals }) {
 
 function CounterpartyRanked({ counterparties, onSelect }) {
   if (!counterparties?.length) {
-    return <div className="text-[12px] text-slate-600">No counterparties available.</div>;
+    return <div className="text-[12px] text-slate-600">No inferred counterparties available.</div>;
   }
 
   return (
@@ -145,7 +145,7 @@ function buildCompactSummary(walletMetrics, entityInsights) {
   ].reduce((sum, value) => sum + value, 0);
 
   const summaryParts = [
-    `${walletMetrics.riskLabel} wallet with ${walletMetrics.totalTxCount ?? 0} transactions across ${walletMetrics.uniqueCounterparties ?? 0} counterparties.`,
+    `${walletMetrics.riskLabel} wallet with ${walletMetrics.totalTxCount ?? 0} observed transactions across ${walletMetrics.uniqueCounterparties ?? 0} inferred counterparties.`,
   ];
 
   if (featureLabel) {
@@ -153,7 +153,7 @@ function buildCompactSummary(walletMetrics, entityInsights) {
   }
 
   if (exposureCount > 0) {
-    summaryParts.push(`${exposureCount} higher-risk counterparty link${exposureCount === 1 ? '' : 's'} surfaced in the visible graph.`);
+    summaryParts.push(`${exposureCount} higher-risk inferred link${exposureCount === 1 ? '' : 's'} surfaced in the visible graph.`);
   } else {
     summaryParts.push('No elevated exposure surfaced in the visible graph.');
   }
@@ -290,7 +290,7 @@ export default function CockpitDashboard({ address, onAnalyse, onClear, onBack }
                 {/* Graph — full width, dominant */}
                 <div>
                   <div className="mb-2.5 text-[10px] font-mono uppercase tracking-[0.2em] text-slate-600">
-                    Primary Risk Path
+                    Primary Inferred Path
                   </div>
                   <div className="relative min-w-0 overflow-hidden rounded-[28px]">
                     <CockpitGraph
@@ -309,7 +309,7 @@ export default function CockpitDashboard({ address, onAnalyse, onClear, onBack }
                       >
                         <Loader2 size={24} className="animate-spin text-violet-300" />
                         <div className="mt-3 text-[12px] text-slate-300">Analysing wallet activity</div>
-                        <div className="mt-1 text-[11px] text-slate-600">Building graph and risk profile...</div>
+                        <div className="mt-1 text-[11px] text-slate-600">Inferring relationships and building risk profile...</div>
                       </div>
                     )}
 
@@ -357,7 +357,7 @@ export default function CockpitDashboard({ address, onAnalyse, onClear, onBack }
                     <EvidencePanel title="Behavioural Signals">
                       <BehaviouralSignals signals={signals} />
                     </EvidencePanel>
-                    <EvidencePanel title="Top Counterparties">
+                    <EvidencePanel title="Top Inferred Counterparties">
                       <CounterpartyRanked
                         counterparties={counterpartyData}
                         onSelect={(counterparty) => {

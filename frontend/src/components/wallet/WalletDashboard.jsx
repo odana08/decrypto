@@ -18,8 +18,8 @@ import { useWalletAnalysis } from '../../hooks/useWalletAnalysis';
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
-  { key: 'transactions', label: 'Transactions' },
-  { key: 'counterparties', label: 'Counterparties' },
+  { key: 'transactions', label: 'Source Txs' },
+  { key: 'counterparties', label: 'Inferred Parties' },
   { key: 'activity', label: 'Activity' },
   { key: 'alerts', label: 'Alerts' },
 ];
@@ -97,7 +97,7 @@ function OverviewTab({ walletMetrics, counterpartyData = [], entityInsights, ale
       <SurfaceCard className="p-5">
         <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-slate-500">Investigation summary</div>
         <div className="mt-4 text-sm leading-relaxed text-slate-300">
-          {walletMetrics?.behaviouralSummary ?? 'Behavioural context is still being assembled from the traced flows.'}
+          {walletMetrics?.behaviouralSummary ?? 'Behavioural context is still being assembled from observed transactions and inferred relationships.'}
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border border-white/6 bg-white/[0.03] p-4">
@@ -131,7 +131,7 @@ function OverviewTab({ walletMetrics, counterpartyData = [], entityInsights, ale
       </SurfaceCard>
 
       <SurfaceCard className="p-5">
-        <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-slate-500">Top counterparties</div>
+        <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-slate-500">Top inferred counterparties</div>
         <div className="mt-4 space-y-3">
           {counterpartyData.slice(0, 5).map((counterparty) => (
             <div key={counterparty.address} className="flex items-center justify-between rounded-2xl border border-white/6 bg-white/[0.03] px-4 py-3">
@@ -145,7 +145,7 @@ function OverviewTab({ walletMetrics, counterpartyData = [], entityInsights, ale
             </div>
           ))}
           {!counterpartyData.length && (
-            <div className="text-sm text-slate-500">Counterparty details will appear once graph links are available.</div>
+            <div className="text-sm text-slate-500">Inferred counterparty details will appear once graph links are available.</div>
           )}
         </div>
       </SurfaceCard>
@@ -245,25 +245,25 @@ export default function WalletDashboard({ address, onBack }) {
       accent: '#c4b5fd',
       summary: `Volume ${walletMetrics?.totalVolume ?? '—'}`,
       items: [
-        `${walletMetrics?.uniqueCounterparties ?? 0} counterparties`,
+        `${walletMetrics?.uniqueCounterparties ?? 0} inferred counterparties`,
         `${walletMetrics?.chain ?? 'Bitcoin'} network`,
       ],
     },
     {
-      label: 'Flow',
+      label: 'Activity',
       value: walletMetrics?.totalOutgoing ?? '—',
       accent: '#5eead4',
-      summary: `Outgoing flow, with ${walletMetrics?.totalIncoming ?? '—'} inbound`,
+      summary: `Outgoing total, with ${walletMetrics?.totalIncoming ?? '—'} inbound`,
       items: [
         `Fees ${walletMetrics?.feesTotal ?? '—'}`,
-        `${graph?.links?.length ?? 0} graph relationships staged`,
+        `${graph?.links?.length ?? 0} inferred graph relationships`,
       ],
     },
     {
       label: 'Exposure',
       value: `${exposureCount} entities`,
       accent: '#fbbf24',
-      summary: 'Flagged or sensitive counterparties surfaced in the visible graph.',
+      summary: 'Flagged or sensitive inferred parties surfaced in the visible graph.',
       items: [
         `${entityInsights?.mixers ?? 0} mixers`,
         `${entityInsights?.sanctioned ?? 0} sanctioned links`,
@@ -337,7 +337,7 @@ export default function WalletDashboard({ address, onBack }) {
               >
                 <Loader2 size={24} className="animate-spin text-purple-400" />
                 <div className="mt-4 text-sm text-slate-200">Analysing wallet activity</div>
-                <div className="mt-2 text-[12px] text-slate-500">Building the staged graph and risk summary from on-chain activity.</div>
+                <div className="mt-2 text-[12px] text-slate-500">Building inferred graph links and risk summary from on-chain activity.</div>
               </div>
             )}
 

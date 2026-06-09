@@ -54,40 +54,40 @@ const FEATURES = [
   {
     Demo: GraphDemo,
     label: "Transaction Graph",
-    desc: "Maps fund movement forward and backward from any starting address across all reachable hops.",
+    desc: "Builds inferred Bitcoin wallet links from observed transaction inputs and outputs.",
   },
   {
     Demo: ClusteringDemo,
-    label: "Address Clustering",
-    desc: "Groups wallets sharing behavioural patterns to reveal the scale of coordinated activity.",
+    label: "Counterparty Ranking",
+    desc: "Ranks inferred counterparties by observed transaction count, estimated BTC volume, and risk.",
   },
   {
     Demo: RiskScoreDemo,
     label: "Risk Scoring",
-    desc: "Scores each address based on transaction history and exposure. Updates as new activity arrives.",
+    desc: "Scores Bitcoin addresses from local or live mempool.space-derived features using the trained classifier.",
   },
   {
     Demo: SanctionsDemo,
-    label: "Sanctions Screening",
-    desc: "Checks addresses against OFAC and international lists. Flags matches without manual lookup.",
+    label: "Watchlist Matches",
+    desc: "Highlights addresses that match the local analyst watchlist configured in the backend.",
   },
   {
     Demo: CrossChainDemo,
-    label: "Multi-Chain Coverage",
-    desc: "Consolidates activity across Ethereum and major L2s into a single workspace.",
+    label: "Dataset Network Scan",
+    desc: "Summarises the local Elliptic-style Bitcoin dataset and samples address-to-address edges.",
   },
   {
     Demo: AuditDemo,
     label: "Investigation Reports",
-    desc: "Exports structured summaries: risk scores, flagged paths, and entity connections.",
+    desc: "Produces structured summaries with model scores, source transactions, and inferred relationships.",
   },
 ];
 
 const STEPS = [
-  { n: "01", title: "Input",  desc: "Paste any wallet address or ENS name. No configuration required." },
-  { n: "02", title: "Trace",  desc: "Transactions are mapped forward and backward across all reachable hops." },
-  { n: "03", title: "Detect", desc: "Links to flagged addresses, sanctioned services, and risk patterns are surfaced automatically." },
-  { n: "04", title: "Output", desc: "Risk score, matched findings, and a summary, structured for compliance or legal review." },
+  { n: "01", title: "Input",  desc: "Paste a Bitcoin wallet address. The backend validates it before analysis." },
+  { n: "02", title: "Observe",  desc: "Recent wallet transactions are fetched from mempool.space and parsed into inputs and outputs." },
+  { n: "03", title: "Infer", desc: "Counterparties and path links are inferred from shared transaction structure and estimated amounts." },
+  { n: "04", title: "Output", desc: "Model score, feature signals, source transactions, and an analyst summary are returned." },
 ];
 
 /* ─── Step 1: Wallet Input Visual ──────────────────────────────────────────── */
@@ -124,7 +124,7 @@ function Step1Visual() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
           <span style={{ fontSize: "11px", color: "#c4b5fd", fontFamily: "monospace", letterSpacing: "0.02em" }}>
-            0x3f5CE5FBFe3E9af3971dD8
+            bc1q9x8f...k2m7
           </span>
           <span style={{
             display: "inline-block", width: "1px", height: "13px",
@@ -134,7 +134,7 @@ function Step1Visual() {
         </div>
       </div>
 
-      {/* ENS + button row */}
+      {/* Validation + button row */}
       <div style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", maxWidth: "300px" }}>
         <div style={{
           display: "flex", alignItems: "center", gap: "5px",
@@ -142,7 +142,7 @@ function Step1Visual() {
           borderRadius: "20px", padding: "3px 9px",
         }}>
           <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#22c55e" }} />
-          <span style={{ fontSize: "10px", color: "#4ade80", fontFamily: "monospace" }}>vitalik.eth</span>
+          <span style={{ fontSize: "10px", color: "#4ade80", fontFamily: "monospace" }}>valid BTC</span>
         </div>
         <div style={{
           marginLeft: "auto", display: "flex", alignItems: "center", gap: "5px",
@@ -164,12 +164,12 @@ function Step2TraceVisual() {
   const inView = useInView(ref, { once: true, margin: "-40px" });
 
   const hops = [
-    { addr: "0x3f5C...f0bE", label: "Origin wallet", dot: "#a78bfa" },
-    { addr: "0xa41D...3322", label: "Intermediate", dot: "#818cf8" },
-    { addr: "0x7cB9...88fa", label: "Known mixer", dot: "#f97316" },
-    { addr: "0x2eE3...c91a", label: "Destination", dot: "#818cf8" },
+    { addr: "bc1q9x...k2m7", label: "Input side", dot: "#a78bfa" },
+    { addr: "1Boat...tpyT", label: "Target wallet", dot: "#818cf8" },
+    { addr: "3J98...WNLy", label: "Inferred party", dot: "#f97316" },
+    { addr: "bc1p4k...v8n2", label: "Output side", dot: "#818cf8" },
   ];
-  const amounts = ["14.2 ETH", "14.1 ETH", "14.0 ETH"];
+  const amounts = ["0.82 BTC", "0.61 BTC", "0.44 BTC"];
 
   return (
     <div ref={ref} style={{
@@ -300,9 +300,9 @@ function Step3Visual() {
   const filled = inView ? (score / 100) * circ : 0;
 
   const findings = [
-    { dot: "#ef4444", label: "Sanctions Match", value: "OFAC SDN", valueColor: "#f87171" },
-    { dot: "#f97316", label: "Flagged Path", value: "3 hops", valueColor: "#fb923c" },
-    { dot: "#a78bfa", label: "Mixer Exposure", value: "18.4%", valueColor: "#c4b5fd" },
+    { dot: "#ef4444", label: "Model Risk", value: "73/100", valueColor: "#f87171" },
+    { dot: "#f97316", label: "Inferred Path", value: "3 hops", valueColor: "#fb923c" },
+    { dot: "#a78bfa", label: "Est. Exposure", value: "18.4%", valueColor: "#c4b5fd" },
   ];
 
   return (
@@ -469,14 +469,14 @@ function ContextGraph({ state }) {
         />
       ))}
 
-      {/* OFAC label */}
+      {/* Risk label */}
       {showRisk && (
         <g style={{ animation: "fadeSl 0.35s ease both" }}>
           <rect x={CX_NODES[8].x - 24} y={CX_NODES[8].y - 21} width={48} height={13} rx={3}
             fill="rgba(239,68,68,0.1)" stroke="rgba(239,68,68,0.28)" strokeWidth={0.8} />
           <text x={CX_NODES[8].x} y={CX_NODES[8].y - 11} textAnchor="middle"
             style={{ fontSize: "6.5px", fill: "#f87171", fontFamily: "monospace", letterSpacing: "0.08em" }}>
-            OFAC SDN
+            RISK
           </text>
         </g>
       )}
@@ -678,7 +678,7 @@ export default function EntryScreen({ onAnalyseWallet }) {
             className="text-base leading-relaxed mb-10"
             style={{ color: "#64748b", maxWidth: "480px", fontWeight: 400 }}
           >
-            Trace how funds move across wallets. Surface risk, sanctions, and suspicious patterns at any depth.
+            Analyse Bitcoin wallets with model scoring, live transaction features, and inferred counterparty relationships.
           </p>
           {/* CTAs */}
           <div className="flex items-center gap-4">
@@ -857,7 +857,7 @@ export default function EntryScreen({ onAnalyseWallet }) {
             className="text-sm leading-relaxed mb-8"
             style={{ color: "#4b5563" }}
           >
-            Paste any wallet address. Get a full risk view with traced paths, flagged connections, and an exportable summary.
+            Paste a Bitcoin wallet address. Get a model risk view with feature signals, source transactions, and inferred links.
           </p>
           <div className="flex items-center gap-4">
             <button

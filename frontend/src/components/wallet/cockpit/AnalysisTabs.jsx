@@ -9,8 +9,8 @@ const IMPACT_COLORS = {
 };
 
 const TABS = [
-  { key: 'transactions', label: 'Transactions' },
-  { key: 'counterparties', label: 'Counterparties' },
+  { key: 'transactions', label: 'Source Txs' },
+  { key: 'counterparties', label: 'Inferred Counterparties' },
   { key: 'activity', label: 'Activity' },
   { key: 'alerts', label: 'Alerts' },
 ];
@@ -114,7 +114,7 @@ function OverviewContent({ signals, counterparties, onSelectCounterparty }) {
       <Panel title="Behavioural Signals">
         <BehaviouralSignalsPanel signals={signals} />
       </Panel>
-      <Panel title="Top Counterparties">
+      <Panel title="Top Inferred Counterparties">
         <CounterpartyRankedList counterparties={counterparties} onSelectCounterparty={onSelectCounterparty} />
       </Panel>
     </div>
@@ -123,7 +123,7 @@ function OverviewContent({ signals, counterparties, onSelectCounterparty }) {
 
 function TransactionsContent({ transactions }) {
   if (!transactions?.length) {
-    return <div className="p-2 text-[12px] text-slate-600">No transactions available.</div>;
+    return <div className="p-2 text-[12px] text-slate-600">No source transactions available.</div>;
   }
 
   return (
@@ -133,8 +133,8 @@ function TransactionsContent({ transactions }) {
           <tr className="border-b border-white/6">
             <th className="px-2 py-2 text-left font-mono font-normal uppercase tracking-[0.16em] text-slate-600">Time</th>
             <th className="px-2 py-2 text-left font-mono font-normal uppercase tracking-[0.16em] text-slate-600">Dir</th>
-            <th className="px-2 py-2 text-left font-mono font-normal uppercase tracking-[0.16em] text-slate-600">Counterparty</th>
-            <th className="px-2 py-2 text-right font-mono font-normal uppercase tracking-[0.16em] text-slate-600">Amount</th>
+            <th className="px-2 py-2 text-left font-mono font-normal uppercase tracking-[0.16em] text-slate-600">Inferred counterparty</th>
+            <th className="px-2 py-2 text-right font-mono font-normal uppercase tracking-[0.16em] text-slate-600">Est. amount</th>
             <th className="px-2 py-2 text-left font-mono font-normal uppercase tracking-[0.16em] text-slate-600">Type</th>
             <th className="px-2 py-2 text-left font-mono font-normal uppercase tracking-[0.16em] text-slate-600">Risk</th>
           </tr>
@@ -182,7 +182,7 @@ function TransactionsContent({ transactions }) {
 
 function CounterpartiesContent({ counterparties, onSelectCounterparty }) {
   if (!counterparties?.length) {
-    return <div className="p-2 text-[12px] text-slate-600">No counterparties available.</div>;
+    return <div className="p-2 text-[12px] text-slate-600">No inferred counterparties available.</div>;
   }
 
   return (
@@ -276,9 +276,7 @@ function ActivityContent({ timelineData }) {
 }
 
 export default function AnalysisTabs({
-  summary,
   signals,
-  exposure,
   counterparties,
   transactions,
   alerts,

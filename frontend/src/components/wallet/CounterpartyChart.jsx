@@ -10,7 +10,7 @@ const CustomTooltip = ({ active, payload }) => {
       <div className="text-slate-300 mb-1">{data.name}</div>
       <div style={{ color: ENTITY_COLORS[data.type] || '#64748b' }}>Type: {data.type}</div>
       <div style={{ color: RISK_COLORS[data.riskLevel] || '#64748b' }}>
-        Volume: {Number(data.volume ?? 0).toFixed(4)} BTC
+        Est. volume: {Number(data.volume ?? 0).toFixed(4)} BTC
       </div>
     </div>
   );
@@ -20,7 +20,7 @@ export default function CounterpartyChart({ data }) {
   return (
     <div className="flex flex-col h-full">
       <div className="flex-shrink-0 px-4 py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-        <span className="text-[11px] font-mono uppercase tracking-widest text-slate-500">Top Counterparties by Volume</span>
+        <span className="text-[11px] font-mono uppercase tracking-widest text-slate-500">Top Inferred Parties by Est. Volume</span>
       </div>
       <div className="flex-1 min-h-0 p-2">
         <ResponsiveContainer width="100%" height="100%">

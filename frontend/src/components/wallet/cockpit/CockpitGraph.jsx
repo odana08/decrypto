@@ -21,7 +21,7 @@ const HIGH_RISK_TYPES = new Set([
 const RISK_WEIGHT = { critical: 4.5, high: 3.2, medium: 2, low: 1 };
 
 const LEGEND_ITEMS = [
-  { label: 'Source', color: '#f8fafc' },
+  { label: 'Input side', color: '#f8fafc' },
   { label: 'Investigated', color: '#93c5fd' },
   { label: 'Exchange', color: '#fbbf24' },
   { label: 'Mixer', color: '#c084fc' },
@@ -55,10 +55,10 @@ function getNodeMeaning(node, column, centerAddress) {
   if (node.type === 'exchange' || node.type === 'bridge') return 'Exchange';
   if (node.type === 'mixer') return 'Mixer';
   if (isHighRiskNode(node)) return 'Flagged';
-  if (column === 'source') return 'Source';
+  if (column === 'source') return 'Input side';
   if (column === 'routing') return 'Routing';
   if (column === 'center') return 'Investigated';
-  return ENTITY_LABELS[node.type] ?? 'Destination';
+  return ENTITY_LABELS[node.type] ?? 'Output side';
 }
 
 function getNodeVisual(node, column, centerAddress) {
@@ -465,14 +465,14 @@ export default function CockpitGraph({
     onPathSelect?.(nextIsSame ? null : item);
   };
 
-  const headerTitle = isConnectionsView ? 'Transaction connections' : 'Readable path view';
+  const headerTitle = isConnectionsView ? 'Inferred transaction links' : 'Readable inferred paths';
   const headerSummary = isConnectionsView
     ? (
       showHiddenNodes
-        ? `Showing ${graph.nodes.length} nodes and ${graph.items.length} transaction links across the visible network.`
-        : `Showing ${graph.items.length} strongest links with ${graph.hiddenNodeCount} additional nodes available.`
+        ? `Showing ${graph.nodes.length} nodes and ${graph.items.length} inferred links from observed vin/vout data.`
+        : `Showing ${graph.items.length} strongest inferred links with ${graph.hiddenNodeCount} additional nodes available.`
     )
-    : `Showing ${graph.items.length} key path${graph.items.length === 1 ? '' : 's'} and hiding ${graph.hiddenNodeCount} low-priority nodes.`;
+    : `Showing ${graph.items.length} key inferred path${graph.items.length === 1 ? '' : 's'} and hiding ${graph.hiddenNodeCount} low-priority nodes.`;
 
   return (
     <>
@@ -497,7 +497,7 @@ export default function CockpitGraph({
         <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(circle at center, transparent 26%, rgba(9,11,18,0.92) 100%)' }} />
 
         <div className="absolute left-6 top-6 z-10 max-w-[420px]">
-          <div className="text-[11px] font-medium text-slate-500">Investigation flow</div>
+          <div className="text-[11px] font-medium text-slate-500">Wallet relationship inference</div>
           <div className="mt-1 text-lg font-medium text-slate-100">{headerTitle}</div>
           <div className="mt-1 text-sm leading-6 text-slate-500">{headerSummary}</div>
         </div>
@@ -515,7 +515,7 @@ export default function CockpitGraph({
           <ModeButton
             active={graphMode === 'connections' && !showHiddenNodes}
             icon={Workflow}
-            label="Transactions"
+            label="Links"
             onClick={() => setGraphMode('connections')}
           />
           <button
@@ -547,13 +547,13 @@ export default function CockpitGraph({
           {!isConnectionsView && (
             <>
               <text x={COLUMN_X.source - 24} y="116" fontSize="11" fontFamily="'JetBrains Mono', monospace" fill="rgba(148,163,184,0.64)">
-                Source wallets
+                Input side
               </text>
               <text x={COLUMN_X.routing} y="116" textAnchor="middle" fontSize="11" fontFamily="'JetBrains Mono', monospace" fill="rgba(148,163,184,0.64)">
                 Routing layer
               </text>
               <text x={COLUMN_X.destination + 40} y="116" textAnchor="end" fontSize="11" fontFamily="'JetBrains Mono', monospace" fill="rgba(148,163,184,0.64)">
-                Destination
+                Output side
               </text>
             </>
           )}
@@ -676,7 +676,7 @@ export default function CockpitGraph({
             ))}
           </div>
           <div>
-            Hover to inspect. Click to lock focus. {graph.hiddenLinkCount} supporting link{graph.hiddenLinkCount === 1 ? '' : 's'} hidden.
+            Hover to inspect. Click to lock focus. Links are inferred from transaction inputs and outputs. {graph.hiddenLinkCount} supporting link{graph.hiddenLinkCount === 1 ? '' : 's'} hidden.
           </div>
         </div>
       </div>

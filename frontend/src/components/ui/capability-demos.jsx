@@ -92,7 +92,7 @@ export const GraphDemo = () => {
         width="100%"
         height="100%"
         role="img"
-        aria-label="Source wallets route through intermediate wallets into one flagged destination, with one highlighted path."
+        aria-label="Input-side wallets connect through intermediate wallets into output-side wallets, with one inferred path highlighted."
       >
         <motion.text
           x="40"
@@ -103,7 +103,7 @@ export const GraphDemo = () => {
           fill="rgba(226,232,240,0.72)"
           style={{ opacity: sourceOpacity }}
         >
-          Source wallets
+          Input side
         </motion.text>
         <motion.text
           x="196"
@@ -127,7 +127,7 @@ export const GraphDemo = () => {
           fill="rgba(241,245,249,0.86)"
           style={{ opacity: destinationLabelOpacity }}
         >
-          Destination
+          Output side
         </motion.text>
         <motion.text
           x="350"
@@ -317,14 +317,14 @@ export const RiskScoreDemo = () => {
   );
 };
 
-// ── 4. Sanctions Screening — animated address scan ────────────────────────────
+// ── 4. Watchlist Screening — animated address scan ────────────────────────────
 export const SanctionsDemo = () => {
   const rows = [
-    { addr: "0x1a2b…c3d4", result: "clear" },
-    { addr: "0xf5e6…7891", result: "flagged", match: "OFAC SDN" },
-    { addr: "0x2b3c…d4e5", result: "clear" },
-    { addr: "0x9a8b…6c7d", result: "flagged", match: "Tornado Cash" },
-    { addr: "0x3c4d…e5f6", result: "clear" },
+    { addr: "bc1q…9x8f", result: "clear" },
+    { addr: "1Feex…sb6u", result: "flagged", match: "WATCHLIST" },
+    { addr: "1Boat…tpyT", result: "clear" },
+    { addr: "3J98…WNLy", result: "flagged", match: "MODEL RISK" },
+    { addr: "bc1p…4k2m", result: "clear" },
   ];
 
   const [checked, setChecked] = useState(0);
@@ -368,14 +368,14 @@ export const SanctionsDemo = () => {
   );
 };
 
-// ── 5. Cross-Chain Coverage — animated coverage bars ─────────────────────────
+// ── 5. Dataset Coverage — animated coverage bars ─────────────────────────────
 export const CrossChainDemo = () => {
   const chains = [
-    { name: "ETH",  pct: 88 },
-    { name: "POL",  pct: 71 },
-    { name: "ARB",  pct: 79 },
-    { name: "OP",   pct: 62 },
-    { name: "BASE", pct: 55 },
+    { name: "FEAT", pct: 88 },
+    { name: "CLASS", pct: 71 },
+    { name: "EDGE", pct: 79 },
+    { name: "MODEL", pct: 62 },
+    { name: "LIVE", pct: 55 },
   ];
 
   const [loaded, setLoaded] = useState(false);
@@ -408,12 +408,12 @@ export const CrossChainDemo = () => {
 // ── 6. Audit Reporting — animated report generation ──────────────────────────
 export const AuditDemo = () => {
   const lines = [
-    { key: "Address",    val: "0x1A2b…C4Df" },
+    { key: "Address",    val: "bc1q…k2m7" },
     { key: "Risk Score", val: "73 — HIGH",        accent: "#ef4444" },
-    { key: "Sanctions",  val: "2 matches",         accent: "#ef4444" },
-    { key: "Exposure",   val: "$2.4M flagged" },
-    { key: "Hops",       val: "6 levels" },
-    { key: "Chains",     val: "ETH · ARB · BASE" },
+    { key: "Watchlist",  val: "No match" },
+    { key: "Exposure",   val: "0.84 BTC est." },
+    { key: "Paths",      val: "3 inferred" },
+    { key: "Source Txs", val: "18 observed" },
     { key: "Status",     val: "Export ready",      accent: "#4ade80" },
   ];
 

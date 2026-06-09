@@ -28,37 +28,37 @@ export default function WalletSummaryCards({ metrics }) {
         icon={TrendingUp}
       />
       <MetricCard
-        label="Stablecoin Share"
-        value={metrics.stablecoinShare}
-        sub="of total flow"
+        label="Feature Source"
+        value={metrics.featureSource}
+        sub="model input"
         accent="yellow"
         icon={RefreshCw}
       />
       <MetricCard
-        label="Counterparties"
+        label="Inferred Parties"
         value={metrics.uniqueCounterparties}
         sub="unique addresses"
         accent="blue"
         icon={Users}
       />
       <MetricCard
-        label="Sanctions Exposure"
-        value={metrics.sanctionedLinks > 0 ? `${metrics.sanctionedLinks} Links` : 'None'}
-        sub="OFAC / CFSPs"
-        accent={metrics.sanctionedLinks > 0 ? 'red' : 'slate'}
+        label="Watchlist Match"
+        value={metrics.watchlistMatch ? 'Yes' : 'None'}
+        sub="local list"
+        accent={metrics.watchlistMatch ? 'red' : 'slate'}
         icon={Shield}
       />
       <MetricCard
-        label="Layering Score"
-        value={`${metrics.layeringScore}/100`}
-        sub="obfuscation index"
+        label="Graph Links"
+        value={metrics.graphLinkCount ?? 0}
+        sub="inferred"
         accent="orange"
         icon={Layers}
       />
       <MetricCard
-        label="Anomaly Score"
-        value={`${metrics.anomalyScore}/100`}
-        sub="behavioural deviation"
+        label="Sample Coverage"
+        value={metrics.historyContext?.sample_coverage != null ? `${Math.round(metrics.historyContext.sample_coverage * 100)}%` : '—'}
+        sub="tx history"
         accent="purple"
         icon={Activity}
       />
