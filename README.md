@@ -1,6 +1,7 @@
 # Decrypto — Bitcoin AML Intelligence Platform
 
 A production-ready AML (Anti-Money Laundering) platform for Bitcoin wallet risk analysis, transaction graph visualisation, and network-level threat surveillance.
+Built as part of Bath Hack 2026
 
 ---
 
