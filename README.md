@@ -142,6 +142,22 @@ RAILWAY_DEPLOY_HOOK_URL
 VERCEL_DEPLOY_HOOK_URL
 ```
 
+Frontend pushes to `main` also trigger a dedicated Vercel deployment workflow:
+
+```text
+.github/workflows/vercel-deploy.yml
+```
+
+Configure these GitHub Actions secrets for automatic Vercel production deploys:
+
+```text
+VERCEL_TOKEN
+VERCEL_ORG_ID
+VERCEL_PROJECT_ID
+```
+
+The workflow runs `npm ci`, `npm run lint`, `npm run build`, then deploys the `frontend/` app to Vercel using the Vercel CLI.
+
 ---
 
 ## API Reference
