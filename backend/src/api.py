@@ -31,11 +31,25 @@ def _cors_origins() -> list[str]:
     return [*DEFAULT_CORS_ORIGINS, *origins]
 
 
+def _allow_all_cors() -> bool:
+    return os.getenv("ALLOW_ALL_CORS", "true").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _error_cors_headers() -> dict[str, str]:
+    if not _allow_all_cors():
+        return {}
+    return {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Headers": "*",
+    }
+
+
 app = FastAPI(title="BTC AML Risk API")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_cors_origins(),
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origins=["*"] if _allow_all_cors() else _cors_origins(),
+    allow_origin_regex=None if _allow_all_cors() else r"https://.*\.vercel\.app",
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -72,7 +86,7 @@ def _wallet_error_payload(address: str | None, exc: Exception) -> dict:
 async def wallet_analysis_error_handler(request: Request, exc: WalletAnalysisError):
     del request
     payload = _wallet_error_payload(exc.address, exc)
-    return JSONResponse(status_code=exc.status_code, content=payload)
+    return JSONResponse(status_code=exc.status_code, content=payload, headers=_error_cors_headers())
 
 
 @app.exception_handler(Exception)
@@ -81,10 +95,10 @@ async def unhandled_error_handler(request: Request, exc: Exception):
     if path.startswith(("/graph/", "/risk/wallet/", "/api/wallet", "/api/graph", "/predict")):
         payload = _wallet_error_payload(None, exc)
         payload["code"] = "internal_error"
-        return JSONResponse(status_code=500, content=payload)
+        return JSONResponse(status_code=500, content=payload, headers=_error_cors_headers())
 
     payload = {"message": str(exc), "code": "internal_error"}
-    return JSONResponse(status_code=500, content=payload)
+    return JSONResponse(status_code=500, content=payload, headers=_error_cors_headers())
 
 
 @app.on_event("startup")
@@ -150,6 +164,7 @@ def transaction_risk(txid: str):
         return JSONResponse(
             status_code=400,
             content={"status": "error", "message": str(exc), "code": "transaction_risk_error"},
+            headers=_error_cors_headers(),
         )
 
 
@@ -161,6 +176,7 @@ def api_transaction(txid: str):
         return JSONResponse(
             status_code=400,
             content={"status": "error", "message": str(exc), "code": "transaction_risk_error"},
+            headers=_error_cors_headers(),
         )
 
 
@@ -172,4 +188,5 @@ def api_network_summary():
         return JSONResponse(
             status_code=500,
             content={"status": "error", "message": str(exc), "code": "network_summary_error"},
+            headers=_error_cors_headers(),
         )

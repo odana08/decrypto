@@ -30,9 +30,6 @@ env/
 .env.*
 !.env.example
 
-# ── Large ML model binaries (re-train locally) ────────────────────────────────
-backend/models/*.joblib
-
 # ── Large dataset files (download / regenerate locally) ───────────────────────
 backend/data/AddrAddr_edgelist.csv
 backend/data/AddrTx_edgelist.csv

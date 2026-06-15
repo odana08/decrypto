@@ -14,6 +14,3 @@ data/AddrTx_edgelist.csv
 data/TxAddr_edgelist.csv
 data/wallets_classes.csv
 data/wallets_features.csv
-
-# Large ML binaries (keep *.json and *.csv — they're small metadata)
-models/*.joblib

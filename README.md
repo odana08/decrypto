@@ -29,7 +29,7 @@ decrypto/
     │   ├── llm_summarizer.py      Gemini AI narrative summary
     │   └── transaction_scorer.py
     ├── data/                      ⚠ gitignored — see "Dataset" section below
-    ├── models/                    ⚠ .joblib files gitignored — JSON/CSV kept
+    ├── models/                    ML model artifacts tracked with Git LFS
     ├── requirements.txt
     └── .env.example
 ```
@@ -40,6 +40,7 @@ decrypto/
 
 - **Node.js** ≥ 18
 - **Python** ≥ 3.10
+- **Git LFS** for the trained model artifact
 - A [Google Gemini API key](https://makersuite.google.com/app/apikey) *(optional — AI summaries disabled without it)*
 
 ---
@@ -135,20 +136,27 @@ To retrain and evaluate the classifier manually, run the `Train And Evaluate Mod
 
 If the quality gate passes, the workflow uploads the generated model artifacts. Commit or publish the approved artifacts according to your release process.
 
-Deployment from `main` is gated behind all CI jobs. Configure these repository secrets to enable deploy hooks:
+The trained model is stored with Git LFS because `backend/models/btc_live_random_forest.joblib` is too large for normal Git storage. Before committing the model locally, run:
 
-```text
-RAILWAY_DEPLOY_HOOK_URL
-VERCEL_DEPLOY_HOOK_URL
+```bash
+git lfs install
+git lfs track "backend/models/*.joblib"
 ```
 
-Frontend pushes to `main` also trigger a dedicated Vercel deployment workflow:
+Deployment from `main` is gated behind CI. When the `CI` workflow succeeds on `main`, these deployment workflows run automatically:
 
 ```text
+.github/workflows/railway-deploy.yml
 .github/workflows/vercel-deploy.yml
 ```
 
-Configure these GitHub Actions secrets for automatic Vercel production deploys:
+Configure this GitHub Actions secret for automatic Railway backend deploys:
+
+```text
+RAILWAY_DEPLOY_HOOK_URL
+```
+
+Configure these GitHub Actions secrets for automatic Vercel frontend deploys:
 
 ```text
 VERCEL_TOKEN
@@ -156,7 +164,7 @@ VERCEL_ORG_ID
 VERCEL_PROJECT_ID
 ```
 
-The workflow runs `npm ci`, `npm run lint`, `npm run build`, then deploys the `frontend/` app to Vercel using the Vercel CLI.
+The backend workflow triggers the Railway deploy hook for the FastAPI service. The frontend workflow runs `npm ci`, `npm run lint`, `npm run build`, then deploys the `frontend/` app to Vercel using the Vercel CLI.
 
 ---
 

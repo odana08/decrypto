@@ -15,8 +15,5 @@ data/TxAddr_edgelist.csv
 data/wallets_classes.csv
 data/wallets_features.csv
 
-# Large ML binaries — mount via Railway volume or download at startup
-models/*.joblib
-
 tests/
 README.md
