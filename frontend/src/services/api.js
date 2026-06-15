@@ -9,7 +9,9 @@
  * an ApiError so consumers can handle it uniformly.
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? '';
+const API_BASE =
+  import.meta.env.VITE_API_BASE ??
+  (import.meta.env.PROD ? 'https://decrypto-production.up.railway.app' : '');
 const RETRYABLE_STATUSES = new Set([502, 503, 504]);
 const RETRY_DELAY_MS = 350;
 
