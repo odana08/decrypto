@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -17,10 +19,23 @@ from src.transaction_scorer import score_transaction
 from src.wallet_analysis_service import analyze_wallet
 from src.network_summary import build_network_summary
 
+DEFAULT_CORS_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+
+def _cors_origins() -> list[str]:
+    configured = os.getenv("FRONTEND_ORIGINS", "")
+    origins = [origin.strip().rstrip("/") for origin in configured.split(",") if origin.strip()]
+    return [*DEFAULT_CORS_ORIGINS, *origins]
+
+
 app = FastAPI(title="BTC AML Risk API")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins(),
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
