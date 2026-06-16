@@ -3,10 +3,12 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 import json
+import os
 from typing import Dict, List, Optional, Tuple
 
 import joblib
 import pandas as pd
+import requests
 
 from src.address_reputation import lookup_address_reputation
 from src.analysis_contracts import (
@@ -30,6 +32,12 @@ FEATURES_PATH = DATA_DIR / "wallets_features.csv"
 MODEL_PATH = MODELS_DIR / "btc_live_random_forest.joblib"
 FEATURE_LIST_PATH = MODELS_DIR / "btc_live_feature_columns.json"
 IMPORTANCE_PATH = MODELS_DIR / "btc_live_feature_importance.csv"
+DEFAULT_MODEL_DOWNLOAD_URL = (
+    "https://media.githubusercontent.com/media/mrmmdana-glitch/decrypto/main/"
+    "backend/models/btc_live_random_forest.joblib"
+)
+LFS_POINTER_PREFIX = b"version https://git-lfs.github.com/spec/v1"
+MIN_MODEL_BYTES = 1_000_000
 
 FEATURE_MEANINGS = {
     "total_txs": "the total number of transactions associated with the wallet",
@@ -65,10 +73,48 @@ def normalize_column_name(name: str) -> str:
     return safe_text(name).replace(" ", "_")
 
 
+def _is_lfs_pointer(path: Path) -> bool:
+    try:
+        if not path.exists() or path.stat().st_size > 1024:
+            return False
+        return path.read_bytes().startswith(LFS_POINTER_PREFIX)
+    except Exception:
+        return False
+
+
+def _download_model_artifact() -> bool:
+    url = os.getenv("MODEL_DOWNLOAD_URL", DEFAULT_MODEL_DOWNLOAD_URL).strip()
+    if not url:
+        return False
+
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    temp_path = MODEL_PATH.with_suffix(".joblib.tmp")
+
+    try:
+        with requests.get(url, stream=True, timeout=120) as response:
+            response.raise_for_status()
+            with open(temp_path, "wb") as file:
+                for chunk in response.iter_content(chunk_size=1024 * 1024):
+                    if chunk:
+                        file.write(chunk)
+
+        if temp_path.stat().st_size < MIN_MODEL_BYTES or _is_lfs_pointer(temp_path):
+            temp_path.unlink(missing_ok=True)
+            return False
+
+        temp_path.replace(MODEL_PATH)
+        return True
+    except Exception:
+        temp_path.unlink(missing_ok=True)
+        return False
+
+
 @lru_cache(maxsize=1)
 def load_model():
     try:
-        if not MODEL_PATH.exists():
+        if not MODEL_PATH.exists() or _is_lfs_pointer(MODEL_PATH):
+            _download_model_artifact()
+        if not MODEL_PATH.exists() or _is_lfs_pointer(MODEL_PATH):
             return None
         return joblib.load(MODEL_PATH)
     except Exception:
