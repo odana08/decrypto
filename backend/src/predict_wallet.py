@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+from datetime import datetime, timezone
 import json
 import os
 from typing import Dict, List, Optional, Tuple
@@ -29,9 +30,11 @@ DATA_DIR = BASE_DIR / "data"
 MODELS_DIR = BASE_DIR / "models"
 
 FEATURES_PATH = DATA_DIR / "wallets_features.csv"
+LIVE_OBSERVATIONS_PATH = DATA_DIR / "live_wallet_feature_observations.csv"
 MODEL_PATH = MODELS_DIR / "btc_live_random_forest.joblib"
 FEATURE_LIST_PATH = MODELS_DIR / "btc_live_feature_columns.json"
 IMPORTANCE_PATH = MODELS_DIR / "btc_live_feature_importance.csv"
+SHAP_IMPORTANCE_PATH = MODELS_DIR / "btc_live_shap_feature_importance.csv"
 DEFAULT_MODEL_DOWNLOAD_URL = (
     "https://media.githubusercontent.com/media/mrmmdana-glitch/decrypto/main/"
     "backend/models/btc_live_random_forest.joblib"
@@ -146,6 +149,19 @@ def load_feature_importance() -> pd.DataFrame:
 
 
 @lru_cache(maxsize=1)
+def load_shap_importance() -> pd.DataFrame:
+    try:
+        df = pd.read_csv(SHAP_IMPORTANCE_PATH)
+        df["feature"] = df["feature"].astype(str).map(normalize_column_name)
+        df["mean_abs_shap"] = df["mean_abs_shap"].map(
+            lambda value: safe_float(value, 0.0, minimum=0.0)
+        )
+        return df.sort_values("mean_abs_shap", ascending=False).reset_index(drop=True)
+    except Exception:
+        return pd.DataFrame(columns=["feature", "mean_abs_shap"])
+
+
+@lru_cache(maxsize=1)
 def get_feature_store_column_map() -> Dict[str, str]:
     try:
         header = pd.read_csv(FEATURES_PATH, nrows=0)
@@ -217,6 +233,40 @@ def get_live_features(address: str, feature_columns: List[str]) -> pd.DataFrame:
     return live_df
 
 
+def _should_capture_live_features() -> bool:
+    return os.getenv("CAPTURE_LIVE_FEATURES", "true").strip().lower() not in {
+        "0",
+        "false",
+        "no",
+        "off",
+    }
+
+
+def _capture_live_feature_observation(address: str, feature_row: pd.DataFrame) -> None:
+    if not _should_capture_live_features() or feature_row.empty:
+        return
+
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        record = {
+            "observed_at": datetime.now(timezone.utc).isoformat(),
+            "address": validate_bitcoin_address(address).normalized,
+        }
+        row = feature_row.iloc[0].to_dict()
+        for column in load_feature_columns():
+            record[column] = safe_float(row.get(column, 0.0), 0.0, minimum=0.0)
+
+        output = pd.DataFrame([record])
+        output.to_csv(
+            LIVE_OBSERVATIONS_PATH,
+            mode="a",
+            header=not LIVE_OBSERVATIONS_PATH.exists(),
+            index=False,
+        )
+    except Exception:
+        return
+
+
 def _fallback_feature_importance(feature_row: pd.DataFrame, top_n: int) -> List[Dict[str, float | str]]:
     row_dict = feature_row.iloc[0].to_dict()
     ranked = sorted(
@@ -239,22 +289,37 @@ def _fallback_feature_importance(feature_row: pd.DataFrame, top_n: int) -> List[
 
 def get_top_features(feature_row: pd.DataFrame, top_n: int = 5) -> List[Dict[str, float | str]]:
     feature_importance = load_feature_importance()
+    shap_importance = load_shap_importance()
     row_dict = feature_row.iloc[0].to_dict()
+    shap_scores = {
+        normalize_column_name(item.get("feature")): safe_float(
+            item.get("mean_abs_shap", 0.0), 0.0, minimum=0.0
+        )
+        for _, item in shap_importance.iterrows()
+    }
+    importance_scores = {
+        normalize_column_name(item.get("feature")): safe_float(
+            item.get("importance", 0.0), 0.0, minimum=0.0
+        )
+        for _, item in feature_importance.iterrows()
+    }
+    ordered_features = list(shap_scores) or list(importance_scores)
 
     candidates: List[Dict[str, float | str]] = []
-    for _, item in feature_importance.iterrows():
-        feature_name = normalize_column_name(item.get("feature"))
+    for feature_name in ordered_features:
         if feature_name not in row_dict:
             continue
         value = safe_float(row_dict.get(feature_name, 0.0), 0.0, minimum=0.0)
-        importance = safe_float(item.get("importance", 0.0), 0.0, minimum=0.0)
-        if value == 0.0 and importance == 0.0:
+        importance = importance_scores.get(feature_name, 0.0)
+        shap_value = shap_scores.get(feature_name, 0.0)
+        if value == 0.0 and importance == 0.0 and shap_value == 0.0:
             continue
         candidates.append(
             {
                 "feature": feature_name,
                 "value": value,
                 "importance": importance,
+                "shap_importance": shap_value,
                 "meaning": FEATURE_MEANINGS.get(feature_name, feature_name),
             }
         )
@@ -360,6 +425,7 @@ def predict_wallet(address: str) -> dict:
         try:
             feature_row = get_live_features(normalized_address, feature_columns)
             feature_source = "live_api"
+            _capture_live_feature_observation(normalized_address, feature_row)
         except Exception as exc:
             feature_row = _empty_feature_frame(feature_columns)
             feature_row.attrs["warnings"] = [f"Live feature fallback used: {exc}"]

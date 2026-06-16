@@ -64,7 +64,7 @@ const FEATURES = [
   {
     Demo: RiskScoreDemo,
     label: "Model Risk Score",
-    desc: "Feeds the 49-column feature row into the classifier; CI tracks ROC AUC, accuracy, recall, and F1.",
+    desc: "Evaluated on 73,495 labelled rows: ROC AUC 0.995, accuracy 0.992, illicit recall 0.906, F1 0.944, with SHAP-ranked feature drivers.",
   },
   {
     Demo: WatchlistDemo,
@@ -79,7 +79,7 @@ const FEATURES = [
   {
     Demo: AuditDemo,
     label: "Analysis Summary",
-    desc: "Returns model output, feature drivers, source transaction context, inferred links, warnings, and optional AI notes.",
+    desc: "Returns model output, SHAP-ranked feature drivers, source transaction context, inferred links, warnings, and optional AI notes.",
   },
 ];
 

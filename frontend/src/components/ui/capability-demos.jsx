@@ -235,7 +235,12 @@ export const RiskScoreDemo = () => {
   const filled = (score / 100) * circ;
   const color = score < 40 ? "#22c55e" : score < 70 ? "#f59e0b" : "#ef4444";
   const riskLabel = score < 40 ? "LOW" : score < 70 ? "MEDIUM" : "HIGH";
-  const metrics = ["ROC AUC", "Accuracy", "Recall", "F1"];
+  const metrics = [
+    ["ROC AUC", "0.995"],
+    ["Accuracy", "0.992"],
+    ["Recall", "0.906"],
+    ["F1", "0.944"],
+  ];
 
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px" }}>
@@ -256,7 +261,7 @@ export const RiskScoreDemo = () => {
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "5px", width: "150px" }}>
-        {metrics.map((metric) => (
+        {metrics.map(([metric, value]) => (
           <div
             key={metric}
             style={{
@@ -271,7 +276,8 @@ export const RiskScoreDemo = () => {
               textAlign: "center",
             }}
           >
-            {metric}
+            <div>{metric}</div>
+            <div style={{ color: "rgba(226,232,240,0.9)", fontSize: "10px", marginTop: "1px" }}>{value}</div>
           </div>
         ))}
       </div>
@@ -375,6 +381,7 @@ export const AuditDemo = () => {
     { key: "Watchlist",  val: "No match" },
     { key: "Exposure",   val: "0.84 BTC est." },
     { key: "Paths",      val: "3 inferred" },
+    { key: "Top Driver", val: "SHAP ranked",       accent: "#a78bfa" },
     { key: "Source Txs", val: "18 observed" },
     { key: "Status",     val: "Review ready",      accent: "#4ade80" },
   ];

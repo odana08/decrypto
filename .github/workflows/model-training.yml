@@ -1,6 +1,8 @@
 name: Train And Evaluate Model
 
 on:
+  schedule:
+    - cron: "0 6 * * 0"
   workflow_dispatch:
     inputs:
       min_illicit_f1:
@@ -25,9 +27,11 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      MODEL_MIN_ILLICIT_F1: ${{ inputs.min_illicit_f1 }}
-      MODEL_MIN_ILLICIT_RECALL: ${{ inputs.min_illicit_recall }}
-      MODEL_MIN_ROC_AUC: ${{ inputs.min_roc_auc }}
+      MODEL_MIN_ILLICIT_F1: ${{ inputs.min_illicit_f1 || '0.75' }}
+      MODEL_MIN_ILLICIT_RECALL: ${{ inputs.min_illicit_recall || '0.70' }}
+      MODEL_MIN_ROC_AUC: ${{ inputs.min_roc_auc || '0.80' }}
+      SHAP_SAMPLE_SIZE: "2000"
+      MODEL_N_ESTIMATORS: "300"
 
     steps:
       - name: Checkout
@@ -59,6 +63,17 @@ jobs:
           curl -fsSL "$MODEL_DATA_ARCHIVE_URL" -o /tmp/model-data.zip
           unzip -o /tmp/model-data.zip -d backend/data
 
+      - name: Restore labelled live observations
+        env:
+          LIVE_TRAINING_ARCHIVE_URL: ${{ secrets.LIVE_TRAINING_ARCHIVE_URL }}
+        run: |
+          if [ -z "$LIVE_TRAINING_ARCHIVE_URL" ]; then
+            echo "LIVE_TRAINING_ARCHIVE_URL is not configured; training only on restored base data."
+            exit 0
+          fi
+          curl -fsSL "$LIVE_TRAINING_ARCHIVE_URL" -o /tmp/live-training-data.zip
+          unzip -o /tmp/live-training-data.zip -d backend/data
+
       - name: Train classifier
         working-directory: backend
         run: python src/train_live_model.py
@@ -74,4 +89,6 @@ jobs:
             backend/models/btc_live_random_forest.joblib
             backend/models/btc_live_feature_columns.json
             backend/models/btc_live_feature_importance.csv
+            backend/models/btc_live_shap_feature_importance.csv
+            backend/models/btc_live_model_metrics.json
           if-no-files-found: error

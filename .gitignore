@@ -24,6 +24,7 @@ __pycache__/
 .venv/
 venv/
 env/
+backend/.cache/
 
 # ── Environment / secrets ─────────────────────────────────────────────────────
 .env
@@ -36,6 +37,8 @@ backend/data/AddrTx_edgelist.csv
 backend/data/TxAddr_edgelist.csv
 backend/data/wallets_classes.csv
 backend/data/wallets_features.csv
+backend/data/live_wallet_feature_observations.csv
+backend/data/live_wallet_labels.csv
 
 # ── Editor directories and files ──────────────────────────────────────────────
 .vscode/*
