@@ -5,47 +5,47 @@ import {
 } from "lucide-react";
 import LetterGlitch from "./LetterGlitch";
 import HorizontalScrollCarousel from "./ui/horizontal-scroll-carousel";
-import { GraphDemo, ClusteringDemo, RiskScoreDemo, SanctionsDemo, CrossChainDemo, AuditDemo } from "./ui/capability-demos";
+import { GraphDemo, ClusteringDemo, RiskScoreDemo, WatchlistDemo, DatasetDemo, AuditDemo } from "./ui/capability-demos";
 
 const PROBLEMS = [
   {
     id: 1,
-    title: "Scale",
-    value: "$158B",
-    subtitle: "Estimated illicit on-chain volume",
+    title: "Source",
+    value: "Live",
+    subtitle: "mempool.space wallet data",
     bullets: [
-      "$93B attributable to sanctioned entities and state-aligned infrastructure.",
-      "Networks operate continuously, appearing as standard transaction flow.",
+      "The backend fetches recent Bitcoin address transactions from mempool.space.",
+      "Address summary fields and raw vin/vout records become the evidence base.",
     ],
   },
   {
     id: 2,
-    title: "Concentration",
-    value: "1.2%",
-    subtitle: "Of total transaction volume",
+    title: "Features",
+    value: "49",
+    subtitle: "Model input columns",
     bullets: [
-      "Risk is narrow but non-obvious. It doesn't cluster at known bad actors.",
-      "Locating it requires reading the full network, not filtering by address.",
+      "Transaction counts, BTC amounts, fees, timing gaps, and counterparty breadth are computed.",
+      "Cached dataset rows are used when available; otherwise live features are built.",
     ],
   },
   {
     id: 3,
-    title: "Structure",
-    value: "Multi-step",
-    subtitle: "Funds routed across wallet chains",
+    title: "Graph",
+    value: "Inferred",
+    subtitle: "Links from transaction structure",
     bullets: [
-      "Transactions are split, moved through intermediaries, and recombined.",
-      "A single transfer is a fragment. The pattern is in the full path.",
+      "Inputs and outputs are inspected to infer wallets that appear around the target.",
+      "Edges are aggregated observations, not proof of ownership or intent.",
     ],
   },
   {
     id: 4,
-    title: "Context",
-    value: "Incomplete",
-    subtitle: "Individual transfers carry no meaning",
+    title: "Output",
+    value: "Screening",
+    subtitle: "Model score plus evidence",
     bullets: [
-      "Risk is a property of patterns across time, counterparties, and paths.",
-      "Without full trace context, key signals are invisible.",
+      "The classifier returns a risk score and label for follow-up review.",
+      "The UI shows source transactions, feature drivers, warnings, and inferred parties.",
     ],
   },
 ];
@@ -53,33 +53,33 @@ const PROBLEMS = [
 const FEATURES = [
   {
     Demo: GraphDemo,
-    label: "Transaction Graph",
-    desc: "Builds inferred Bitcoin wallet links from observed transaction inputs and outputs.",
+    label: "Transaction Parsing",
+    desc: "Reads recent mempool.space transactions and separates target-side inputs, outputs, fees, and BTC amounts.",
   },
   {
     Demo: ClusteringDemo,
-    label: "Counterparty Ranking",
-    desc: "Ranks inferred counterparties by observed transaction count, estimated BTC volume, and risk.",
+    label: "Inferred Counterparties",
+    desc: "Aggregates nearby addresses from vin/vout structure by direction, transaction count, and estimated BTC volume.",
   },
   {
     Demo: RiskScoreDemo,
-    label: "Risk Scoring",
-    desc: "Scores Bitcoin addresses from local or live mempool.space-derived features using the trained classifier.",
+    label: "Model Risk Score",
+    desc: "Feeds the 49-column wallet feature row into the trained classifier and returns a screening score and label.",
   },
   {
-    Demo: SanctionsDemo,
-    label: "Watchlist Matches",
-    desc: "Highlights addresses that match the local analyst watchlist configured in the backend.",
+    Demo: WatchlistDemo,
+    label: "Local Watchlist",
+    desc: "Checks the configured backend watchlist and keeps it separate from model risk or external legal conclusions.",
   },
   {
-    Demo: CrossChainDemo,
+    Demo: DatasetDemo,
     label: "Dataset Network Scan",
-    desc: "Summarises the local Elliptic-style Bitcoin dataset and samples address-to-address edges.",
+    desc: "When local Elliptic-style files exist, scores dataset wallets and samples stored address-to-address edges.",
   },
   {
     Demo: AuditDemo,
-    label: "Investigation Reports",
-    desc: "Produces structured summaries with model scores, source transactions, and inferred relationships.",
+    label: "Analysis Summary",
+    desc: "Returns model output, feature drivers, source transaction context, inferred links, warnings, and optional AI notes.",
   },
 ];
 
@@ -107,7 +107,7 @@ function Step1Visual() {
       }}>
         <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#22c55e", flexShrink: 0 }} />
         <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.28)", fontFamily: "monospace", letterSpacing: "0.03em" }}>
-          ethereum mainnet
+          bitcoin mainnet
         </span>
       </div>
 
@@ -180,7 +180,7 @@ function Step2TraceVisual() {
       <div style={{
         fontSize: "9px", color: "rgba(139,92,246,0.5)", letterSpacing: "0.14em",
         textTransform: "uppercase", marginBottom: "14px",
-      }}>Transaction trace</div>
+      }}>Observed transaction structure</div>
 
       {hops.map((hop, i) => (
         <motion.div
@@ -215,7 +215,7 @@ function Step2TraceVisual() {
   );
 }
 
-/* ─── Step 3: Graph Exploration Visual (suspicious paths) ───────────────────── */
+/* ─── Step 3: Graph Exploration Visual (inferred links) ─────────────────────── */
 function Step2Visual() {
   // Static node layout: [cx, cy, isSuspect, radius]
   const nodes = [
@@ -279,12 +279,12 @@ function Step2Visual() {
         </g>
       ))}
 
-      {/* "Suspicious path" label */}
+      {/* "Inferred path" label */}
       <rect x="148" y="4" width="104" height="16" rx="4"
         fill="rgba(239,68,68,0.1)" stroke="rgba(239,68,68,0.3)" strokeWidth="1" />
       <text x="200" y="15" textAnchor="middle"
         style={{ fontSize: "8px", fill: "#f87171", fontFamily: "monospace", letterSpacing: "0.08em" }}>
-        SUSPICIOUS PATH
+        INFERRED LINK
       </text>
     </svg>
   );
@@ -390,7 +390,7 @@ const CX_NODES = [
   { id: 5, x: 225, y: 210                      },
   { id: 6, x: 320, y: 80,  type: "suspect"     },
   { id: 7, x: 320, y: 175                      },
-  { id: 8, x: 405, y: 50,  type: "sanctioned"  },
+  { id: 8, x: 405, y: 50,  type: "watchlist"  },
   { id: 9, x: 405, y: 130, type: "suspect"     },
 ];
 const CX_EDGES = [
@@ -413,14 +413,14 @@ function ContextGraph({ state }) {
 
   const nodeColor = (n) => {
     if (n.type === "source")     return "rgba(167,139,250,0.75)";
-    if (n.type === "sanctioned") return showRisk ? "#ef4444" : "rgba(255,255,255,0.08)";
+    if (n.type === "watchlist") return showRisk ? "#ef4444" : "rgba(255,255,255,0.08)";
     if (n.type === "suspect")    return showRisk ? "#f97316" : "rgba(255,255,255,0.08)";
     if (n.type === "path")       return showTrace ? "#818cf8"  : "rgba(255,255,255,0.1)";
     return "rgba(255,255,255,0.08)";
   };
   const nodeStroke = (n) => {
     if (n.type === "source")     return "rgba(167,139,250,0.35)";
-    if (n.type === "sanctioned") return showRisk ? "rgba(239,68,68,0.5)"   : "rgba(255,255,255,0.07)";
+    if (n.type === "watchlist") return showRisk ? "rgba(239,68,68,0.5)"   : "rgba(255,255,255,0.07)";
     if (n.type === "suspect")    return showRisk ? "rgba(249,115,22,0.45)" : "rgba(255,255,255,0.07)";
     if (n.type === "path")       return showTrace ? "rgba(129,140,248,0.35)" : "rgba(255,255,255,0.07)";
     return "rgba(255,255,255,0.07)";
@@ -439,9 +439,9 @@ function ContextGraph({ state }) {
       </defs>
 
       {/* Glow halos on risk nodes */}
-      {showRisk && CX_NODES.filter(n => n.type === "sanctioned" || n.type === "suspect").map((n, i) => (
+      {showRisk && CX_NODES.filter(n => n.type === "watchlist" || n.type === "suspect").map((n, i) => (
         <circle key={i} cx={n.x} cy={n.y} r={20}
-          fill={n.type === "sanctioned" ? "rgba(239,68,68,0.22)" : "rgba(249,115,22,0.18)"}
+          fill={n.type === "watchlist" ? "rgba(239,68,68,0.22)" : "rgba(249,115,22,0.18)"}
           filter="url(#cxGlow)"
           style={{ transition: "opacity 0.7s" }}
         />
@@ -463,7 +463,7 @@ function ContextGraph({ state }) {
       {/* Nodes */}
       {CX_NODES.map((n) => (
         <circle key={n.id} cx={n.x} cy={n.y}
-          r={n.id === 0 ? 5.5 : n.type === "sanctioned" ? 5 : 4}
+          r={n.id === 0 ? 5.5 : n.type === "watchlist" ? 5 : 4}
           fill={nodeColor(n)} stroke={nodeStroke(n)} strokeWidth={1.2}
           style={{ transition: "fill 0.55s, stroke 0.55s" }}
         />
@@ -504,20 +504,20 @@ function ContextGraph({ state }) {
 const CONTEXT_PARAGRAPHS = [
   {
     num: "01",
-    heading: "Public, but unreadable at scale",
-    body: "Every on-chain transaction is visible, but volume and indirect routing make manual analysis impractical. Illicit flows are structured to use this gap \u2014 appearing as normal activity spread across many wallets.",
+    heading: "Public data still needs structure",
+    body: "Bitcoin transaction data is public, but a wallet view is easier to reason about after transactions are parsed into inputs, outputs, fees, timing gaps, and observed counterparties.",
     graphState: 0,
   },
   {
     num: "02",
-    heading: "Risk lives in the path, not the transfer",
-    body: "Funds move through chains of wallets \u2014 split, mixed, and recombined across multiple steps. The patterns that indicate risk only become visible when the full trace is reconstructed end to end.",
+    heading: "Links are inferred from transactions",
+    body: "The app does not know wallet ownership. It infers relationships by checking where the target address appears in transaction inputs and outputs, then aggregating nearby addresses as observed counterparties.",
     graphState: 1,
   },
   {
     num: "03",
-    heading: "Connected to real-world harm",
-    body: "On-chain illicit activity links directly to sanctions exposure, fraud, and financial abuse. Identifying it is a compliance requirement for exchanges, custodians, and financial infrastructure operators.",
+    heading: "The model is a screening layer",
+    body: "The classifier scores the available feature row and returns a risk label for review. A high score is an investigation signal, not a legal conclusion or proof of wrongdoing.",
     graphState: 2,
   },
 ];
@@ -729,11 +729,11 @@ export default function EntryScreen({ onAnalyseWallet }) {
               Capabilities
             </h2>
             <p style={{ fontSize: "14px", color: "#4b5563", lineHeight: 1.7, maxWidth: "520px" }}>
-              Six functions. One workspace.
+              Live wallet features, model scores, inferred links, and dataset summaries in one workspace.
             </p>
           </div>
 
-          <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+          <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
             {FEATURES.map(({ Demo, label, desc }, i) => (
               <motion.div
                 key={label}
@@ -753,7 +753,7 @@ export default function EntryScreen({ onAnalyseWallet }) {
                 </div>
                 <div style={{ padding: "16px 20px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
                   <div className="text-[13px] font-medium" style={{ color: "#e5e7eb", marginBottom: "6px" }}>{label}</div>
-                  <div className="text-xs leading-relaxed" style={{ color: "#4b5563" }}>{desc}</div>
+                  <div className="text-xs leading-relaxed" style={{ color: "#4b5563", minHeight: "48px" }}>{desc}</div>
                 </div>
               </motion.div>
             ))}
@@ -780,7 +780,7 @@ export default function EntryScreen({ onAnalyseWallet }) {
               How it works
             </h2>
             <p style={{ fontSize: "14px", color: "#4b5563", lineHeight: 1.7, maxWidth: "420px" }}>
-              Four steps. Input to output.
+              What the backend actually does after you submit a Bitcoin address.
             </p>
           </motion.div>
 
@@ -885,7 +885,7 @@ export default function EntryScreen({ onAnalyseWallet }) {
         className="w-full py-6 px-8 flex items-center justify-end"
         style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
       >
-        <span className="text-xs" style={{ color: "#374151" }}>Mock data only. Not financial or legal advice.</span>
+        <span className="text-xs" style={{ color: "#374151" }}>Model screening and inferred links only. Not financial or legal advice.</span>
       </footer>
       </div>
     </div>

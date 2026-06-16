@@ -138,7 +138,7 @@ export const GraphDemo = () => {
           fill="rgba(251,113,133,0.92)"
           style={{ opacity: meaningLabelOpacity }}
         >
-          Flagged wallet
+          Higher model risk
         </motion.text>
 
         <g>
@@ -237,9 +237,9 @@ export const GraphDemo = () => {
 // ── 2. Entity Clustering — three animated cluster groups ─────────────────────
 export const ClusteringDemo = () => {
   const groups = [
-    { label: "Exchanges", color: "#6366f1", cx: 80, cy: 92, dots: [{x:57,y:74},{x:86,y:63},{x:106,y:83},{x:74,y:108},{x:54,y:100}] },
-    { label: "Mixers",    color: "#ef4444", cx: 210, cy: 98, dots: [{x:191,y:80},{x:218,y:73},{x:236,y:94},{x:220,y:118},{x:195,y:115}] },
-    { label: "Unknown",   color: "#6b7280", cx: 340, cy: 92, dots: [{x:319,y:78},{x:350,y:70},{x:366,y:94},{x:350,y:115},{x:321,y:108}] },
+    { label: "Incoming", color: "#6366f1", cx: 80, cy: 92, dots: [{x:57,y:74},{x:86,y:63},{x:106,y:83},{x:74,y:108},{x:54,y:100}] },
+    { label: "Repeated", color: "#ef4444", cx: 210, cy: 98, dots: [{x:191,y:80},{x:218,y:73},{x:236,y:94},{x:220,y:118},{x:195,y:115}] },
+    { label: "Outgoing", color: "#6b7280", cx: 340, cy: 92, dots: [{x:319,y:78},{x:350,y:70},{x:366,y:94},{x:350,y:115},{x:321,y:108}] },
   ];
 
   return (
@@ -318,7 +318,7 @@ export const RiskScoreDemo = () => {
 };
 
 // ── 4. Watchlist Screening — animated address scan ────────────────────────────
-export const SanctionsDemo = () => {
+export const WatchlistDemo = () => {
   const rows = [
     { addr: "bc1q…9x8f", result: "clear" },
     { addr: "1Feex…sb6u", result: "flagged", match: "WATCHLIST" },
@@ -369,13 +369,13 @@ export const SanctionsDemo = () => {
 };
 
 // ── 5. Dataset Coverage — animated coverage bars ─────────────────────────────
-export const CrossChainDemo = () => {
+export const DatasetDemo = () => {
   const chains = [
-    { name: "FEAT", pct: 88 },
-    { name: "CLASS", pct: 71 },
-    { name: "EDGE", pct: 79 },
-    { name: "MODEL", pct: 62 },
-    { name: "LIVE", pct: 55 },
+    { name: "FEATS", pct: 88 },
+    { name: "LABELS", pct: 71 },
+    { name: "EDGES", pct: 79 },
+    { name: "SCORED", pct: 62 },
+    { name: "SAMPLE", pct: 55 },
   ];
 
   const [loaded, setLoaded] = useState(false);
@@ -388,7 +388,7 @@ export const CrossChainDemo = () => {
     <div style={{ padding: "16px 22px", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", gap: "11px" }}>
       {chains.map((c, i) => (
         <div key={c.name} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <span style={{ width: "36px", fontSize: "9px", fontWeight: 600, color: "#4b5563", fontFamily: "'JetBrains Mono',monospace", flexShrink: 0 }}>{c.name}</span>
+          <span style={{ width: "44px", fontSize: "9px", fontWeight: 600, color: "#4b5563", fontFamily: "'JetBrains Mono',monospace", flexShrink: 0 }}>{c.name}</span>
           <div style={{ flex: 1, height: "3px", background: "rgba(255,255,255,0.05)", borderRadius: "2px", overflow: "hidden" }}>
             <div style={{
               height: "100%",
@@ -414,7 +414,7 @@ export const AuditDemo = () => {
     { key: "Exposure",   val: "0.84 BTC est." },
     { key: "Paths",      val: "3 inferred" },
     { key: "Source Txs", val: "18 observed" },
-    { key: "Status",     val: "Export ready",      accent: "#4ade80" },
+    { key: "Status",     val: "Review ready",      accent: "#4ade80" },
   ];
 
   const [count, setCount] = useState(0);
@@ -434,7 +434,7 @@ export const AuditDemo = () => {
   return (
     <div style={{ padding: "14px 18px", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center" }}>
       <div style={{ fontSize: "9px", letterSpacing: "0.1em", color: "#374151", marginBottom: "12px" }}>
-        {count >= lines.length ? "REPORT GENERATED" : "GENERATING REPORT..."}
+        {count >= lines.length ? "SUMMARY READY" : "BUILDING SUMMARY..."}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
         {lines.slice(0, count).map((l, i) => (
