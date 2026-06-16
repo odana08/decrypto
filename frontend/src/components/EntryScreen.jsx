@@ -64,7 +64,7 @@ const FEATURES = [
   {
     Demo: RiskScoreDemo,
     label: "Model Risk Score",
-    desc: "Feeds the 49-column wallet feature row into the trained classifier and returns a screening score and label.",
+    desc: "Feeds the 49-column feature row into the classifier; CI tracks ROC AUC, accuracy, recall, and F1.",
   },
   {
     Demo: WatchlistDemo,
@@ -733,7 +733,7 @@ export default function EntryScreen({ onAnalyseWallet }) {
             </p>
           </div>
 
-          <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {FEATURES.map(({ Demo, label, desc }, i) => (
               <motion.div
                 key={label}

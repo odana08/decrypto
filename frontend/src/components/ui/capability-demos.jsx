@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from "react";
-import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { useEffect, useState } from "react";
 
 // ── 1. Graph Intelligence — animated transaction trace ────────────────────────
 const FLOW_SOURCES = [
@@ -49,187 +48,129 @@ const FLOW_PATHS = [
 ];
 
 export const GraphDemo = () => {
-  const ref = useRef(null);
-  const reducedMotion = useReducedMotion();
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start 88%", "end 24%"],
-  });
-
-  const sourceOpacity = useTransform(scrollYProgress, [0, 0.16], [0, 1]);
-  const sourceRadius = useTransform(scrollYProgress, [0, 0.16], [2.8, 4.8]);
-
-  const pathLength = useTransform(scrollYProgress, [0.14, 0.4], [0, 1]);
-  const secondaryPathOpacity = useTransform(scrollYProgress, [0.14, 0.4, 0.86], [0, 0.62, 0.38]);
-  const primaryPathOpacity = useTransform(scrollYProgress, [0.14, 0.4, 0.82], [0, 0.78, 1]);
-  const secondaryPathWidth = useTransform(scrollYProgress, [0.14, 1], [1.2, 1.1]);
-  const primaryPathWidth = useTransform(scrollYProgress, [0.14, 0.82], [1.45, 2.5]);
-
-  const routingOpacity = useTransform(scrollYProgress, [0.32, 0.52], [0, 1]);
-  const routingRadius = useTransform(scrollYProgress, [0.32, 0.52], [3.1, 5.2]);
-
-  const destinationOpacity = useTransform(scrollYProgress, [0.5, 0.68], [0, 1]);
-  const destinationRadius = useTransform(scrollYProgress, [0.5, 0.68], [3.6, 7.6]);
-  const destinationHaloOpacity = useTransform(scrollYProgress, [0.5, 0.68, 0.9], [0, 0.2, 0.34]);
-  const primaryNodeHaloOpacity = useTransform(scrollYProgress, [0.68, 0.88], [0, 0.24]);
-
-  const primaryParticleOpacity = useTransform(scrollYProgress, [0.26, 0.46, 0.82], [0, 0.78, 0.96]);
-  const secondaryParticleOpacity = useTransform(scrollYProgress, [0.26, 0.46, 0.84], [0, 0.48, 0.28]);
-  const destinationLabelOpacity = useTransform(scrollYProgress, [0.54, 0.72], [0, 1]);
-  const meaningLabelOpacity = useTransform(scrollYProgress, [0.68, 0.84], [0, 1]);
-
   return (
     <div
-      ref={ref}
       style={{
         width: "100%",
         height: "100%",
-        padding: "16px 14px 14px",
+        padding: "18px 18px 16px",
       }}
     >
-      <motion.svg
+      <svg
         viewBox="0 0 400 180"
         width="100%"
         height="100%"
         role="img"
-        aria-label="Input-side wallets connect through intermediate wallets into output-side wallets, with one inferred path highlighted."
+        aria-label="Transaction inputs and outputs are parsed around a target Bitcoin address."
       >
-        <motion.text
-          x="40"
-          y="22"
+        <text
+          x="64"
+          y="24"
           fontSize="8"
           letterSpacing="0.12em"
           fontFamily="Inter, sans-serif"
           fill="rgba(226,232,240,0.72)"
-          style={{ opacity: sourceOpacity }}
         >
-          Input side
-        </motion.text>
-        <motion.text
-          x="196"
-          y="22"
-          textAnchor="middle"
-          fontSize="8"
-          letterSpacing="0.12em"
-          fontFamily="Inter, sans-serif"
-          fill="rgba(226,232,240,0.72)"
-          style={{ opacity: routingOpacity }}
-        >
-          Routing layer
-        </motion.text>
-        <motion.text
-          x="350"
-          y="22"
+          VIN
+        </text>
+        <text
+          x="200"
+          y="24"
           textAnchor="middle"
           fontSize="8"
           letterSpacing="0.12em"
           fontFamily="Inter, sans-serif"
           fill="rgba(241,245,249,0.86)"
-          style={{ opacity: destinationLabelOpacity }}
         >
-          Output side
-        </motion.text>
-        <motion.text
-          x="350"
-          y="36"
+          TARGET
+        </text>
+        <text
+          x="336"
+          y="24"
           textAnchor="middle"
-          fontSize="7.5"
+          fontSize="8"
+          letterSpacing="0.12em"
           fontFamily="Inter, sans-serif"
-          fill="rgba(251,113,133,0.92)"
-          style={{ opacity: meaningLabelOpacity }}
+          fill="rgba(226,232,240,0.72)"
         >
-          Higher model risk
-        </motion.text>
+          VOUT
+        </text>
 
         <g>
           {FLOW_PATHS.map((path) => (
             <g key={path.id}>
-              <motion.path
+              <path
                 d={path.d}
                 fill="none"
                 stroke={path.color}
                 strokeLinecap="round"
-                style={{
-                  pathLength,
-                  opacity: path.primary ? primaryPathOpacity : secondaryPathOpacity,
-                  strokeWidth: path.primary ? primaryPathWidth : secondaryPathWidth,
-                }}
+                strokeWidth={path.primary ? 2.5 : 1.2}
+                opacity={path.primary ? 0.95 : 0.42}
               />
-              {!reducedMotion && (
-                <motion.circle
-                  r={path.primary ? 2.4 : 1.8}
-                  fill={path.particle}
-                  style={{
-                    opacity: path.primary ? primaryParticleOpacity : secondaryParticleOpacity,
-                  }}
-                >
-                  <animateMotion
-                    dur={path.primary ? "2.1s" : "3.1s"}
-                    repeatCount="indefinite"
-                    rotate="auto"
-                    path={path.d}
-                  />
-                </motion.circle>
-              )}
+              <circle r={path.primary ? 2.4 : 1.8} fill={path.particle} opacity={path.primary ? 0.95 : 0.45}>
+                <animateMotion
+                  dur={path.primary ? "2.1s" : "3.1s"}
+                  repeatCount="indefinite"
+                  rotate="auto"
+                  path={path.d}
+                />
+              </circle>
             </g>
           ))}
         </g>
 
         <g>
           {FLOW_SOURCES.map((node) => (
-            <motion.circle
+            <circle
               key={node.id}
               cx={node.x}
               cy={node.y}
-              r={sourceRadius}
+              r="4.8"
               fill="#d9e7f0"
               stroke="rgba(148,163,184,0.35)"
               strokeWidth="1"
-              style={{ opacity: sourceOpacity }}
+              opacity="0.92"
             />
           ))}
 
           {FLOW_ROUTING.map((node) => (
             <g key={node.id}>
               {node.active && (
-                <motion.circle
+                <circle
                   cx={node.x}
                   cy={node.y}
                   r="16"
                   fill="rgba(251,113,133,0.12)"
-                  style={{ opacity: primaryNodeHaloOpacity }}
                 />
               )}
-              <motion.circle
+              <circle
                 cx={node.x}
                 cy={node.y}
-                r={routingRadius}
+                r="5.2"
                 fill="#d9e7f0"
                 stroke={node.active ? "rgba(251,113,133,0.36)" : "rgba(148,163,184,0.35)"}
                 strokeWidth="1"
-                style={{ opacity: routingOpacity }}
+                opacity="0.94"
               />
             </g>
           ))}
 
-          <motion.circle
+          <circle
             cx={FLOW_DESTINATION.x}
             cy={FLOW_DESTINATION.y}
             r="23"
             fill="rgba(251,113,133,0.14)"
-            style={{ opacity: destinationHaloOpacity }}
           />
-          <motion.circle
+          <circle
             cx={FLOW_DESTINATION.x}
             cy={FLOW_DESTINATION.y}
-            r={destinationRadius}
+            r="7.6"
             fill="#fb7185"
             stroke="rgba(251,113,133,0.58)"
             strokeWidth="1.2"
-            style={{ opacity: destinationOpacity }}
           />
         </g>
-      </motion.svg>
+      </svg>
     </div>
   );
 };
@@ -294,11 +235,12 @@ export const RiskScoreDemo = () => {
   const filled = (score / 100) * circ;
   const color = score < 40 ? "#22c55e" : score < 70 ? "#f59e0b" : "#ef4444";
   const riskLabel = score < 40 ? "LOW" : score < 70 ? "MEDIUM" : "HIGH";
+  const metrics = ["ROC AUC", "Accuracy", "Recall", "F1"];
 
   return (
-    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px" }}>
       <div style={{ position: "relative" }}>
-        <svg width="134" height="134">
+        <svg width="118" height="118" viewBox="0 0 134 134">
           <circle cx="67" cy="67" r={R} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6" />
           <circle cx="67" cy="67" r={R} fill="none"
             stroke={color} strokeWidth="6"
@@ -312,6 +254,26 @@ export const RiskScoreDemo = () => {
           <span style={{ fontSize: "2rem", fontWeight: 700, color: "#f1f0f4", letterSpacing: "-0.04em", lineHeight: 1 }}>{score}</span>
           <span style={{ fontSize: "9px", fontWeight: 700, color, letterSpacing: "0.1em", marginTop: "4px" }}>{riskLabel}</span>
         </div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "5px", width: "150px" }}>
+        {metrics.map((metric) => (
+          <div
+            key={metric}
+            style={{
+              border: "1px solid rgba(255,255,255,0.07)",
+              borderRadius: "4px",
+              background: "rgba(255,255,255,0.03)",
+              color: "rgba(148,163,184,0.74)",
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "8px",
+              letterSpacing: "0.04em",
+              padding: "3px 5px",
+              textAlign: "center",
+            }}
+          >
+            {metric}
+          </div>
+        ))}
       </div>
     </div>
   );
