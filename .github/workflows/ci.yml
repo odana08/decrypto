@@ -17,6 +17,23 @@ jobs:
   backend:
     name: Backend Tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: decrypto
+          POSTGRES_PASSWORD: decrypto
+          POSTGRES_DB: decrypto_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U decrypto -d decrypto_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://decrypto:decrypto@localhost:5432/decrypto_test
 
     steps:
       - name: Checkout
@@ -39,6 +56,9 @@ jobs:
 
       - name: Compile backend
         run: python -m compileall backend/src backend/scripts
+
+      - name: Verify Postgres schema
+        run: python backend/scripts/init_database.py
 
       - name: Run backend tests
         run: PYTHONPATH=backend pytest backend/tests

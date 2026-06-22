@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from src.analysis_contracts import build_analysis_contract, build_empty_graph, empty_feature_map
 from src.analysis_errors import WalletAnalysisError
+from src.database import init_schema, table_counts
 from src.predict_wallet import (
     get_feature_store_column_map,
     load_feature_columns,
@@ -104,6 +105,10 @@ async def unhandled_error_handler(request: Request, exc: Exception):
 @app.on_event("startup")
 def warm_backend_caches():
     try:
+        init_schema()
+    except Exception:
+        pass
+    try:
         load_model()
     except Exception:
         pass
@@ -123,7 +128,7 @@ def warm_backend_caches():
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "database": table_counts()}
 
 
 @app.get("/graph/{address}")

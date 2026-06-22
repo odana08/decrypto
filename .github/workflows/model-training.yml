@@ -32,6 +32,7 @@ jobs:
       MODEL_MIN_ROC_AUC: ${{ inputs.min_roc_auc || '0.80' }}
       SHAP_SAMPLE_SIZE: "2000"
       MODEL_N_ESTIMATORS: "300"
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
     steps:
       - name: Checkout

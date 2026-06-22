@@ -18,6 +18,8 @@ from src.api import app  # noqa: E402
 from src.feature_builder import LIVE_FEATURE_COLUMNS  # noqa: E402
 from src.predict_wallet import (  # noqa: E402
     _get_cached_feature_row,
+    _capture_live_feature_observation,
+    get_cached_features,
     get_feature_store_column_map,
     load_feature_columns,
     load_feature_importance,
@@ -304,6 +306,40 @@ class WalletHardeningTests(unittest.TestCase):
         payload = response.json()
         self._assert_contract(payload)
         self.assertEqual(payload["wallet_address"], address)
+
+    def test_postgres_feature_lookup_wins_before_csv_or_live_api(self):
+        address = "1BoatSLRHtKNngkdXEeobR76b53LETtpyT"
+        columns = ["total_txs", "btc_transacted_total"]
+
+        with patch(
+            "src.predict_wallet.fetch_wallet_features",
+            return_value={"total_txs": 7.0, "btc_transacted_total": 123.45},
+        ):
+            feature_row = get_cached_features(address, columns)
+
+        self.assertIsNotNone(feature_row)
+        self.assertEqual(feature_row.attrs["feature_source"], "postgres")
+        self.assertEqual(feature_row.iloc[0]["total_txs"], 7.0)
+        self.assertEqual(feature_row.iloc[0]["btc_transacted_total"], 123.45)
+
+    def test_live_feature_capture_writes_postgres_and_csv_fallback(self):
+        address = "1BoatSLRHtKNngkdXEeobR76b53LETtpyT"
+        feature_row = pd.DataFrame([{"total_txs": 3.0, "btc_transacted_total": 9.5}])
+
+        with ExitStack() as stack:
+            saved = stack.enter_context(patch("src.predict_wallet.save_live_feature_observation"))
+            stack.enter_context(patch("src.predict_wallet.load_feature_columns", return_value=["total_txs", "btc_transacted_total"]))
+            stack.enter_context(patch("src.predict_wallet.LIVE_OBSERVATIONS_PATH", BACKEND_ROOT / "data" / "test_live_observations.csv"))
+            stack.enter_context(patch("src.predict_wallet.DATA_DIR", BACKEND_ROOT / "data"))
+            output_path = BACKEND_ROOT / "data" / "test_live_observations.csv"
+            if output_path.exists():
+                output_path.unlink()
+            try:
+                _capture_live_feature_observation(address, feature_row)
+                saved.assert_called_once()
+                self.assertTrue(output_path.exists())
+            finally:
+                output_path.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

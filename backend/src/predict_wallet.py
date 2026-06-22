@@ -22,6 +22,7 @@ from src.analysis_contracts import (
     safe_text,
 )
 from src.btc_address import validate_bitcoin_address
+from src.database import fetch_wallet_features, save_live_feature_observation
 from src.feature_builder import LIVE_FEATURE_COLUMNS, build_live_features, get_merged_address_stats
 from src.llm_summarizer import summarize_wallet
 
@@ -200,6 +201,18 @@ def _get_cached_feature_row(address: str, feature_columns: Tuple[str, ...]) -> O
 
 def get_cached_features(address: str, feature_columns: List[str]) -> Optional[pd.DataFrame]:
     normalized_address = validate_bitcoin_address(address).normalized
+    db_features = fetch_wallet_features(normalized_address, feature_columns)
+    if db_features:
+        df = pd.DataFrame([db_features])
+        df.attrs["normalized_address"] = normalized_address
+        df.attrs["sampled_tx_count"] = 0
+        df.attrs["sampled_btc_total"] = 0.0
+        df.attrs["lifetime_tx_count"] = safe_int(df.iloc[0].get("total_txs", 0.0), minimum=0)
+        df.attrs["lifetime_btc_total"] = safe_float(df.iloc[0].get("btc_transacted_total", 0.0), minimum=0.0)
+        df.attrs["warnings"] = []
+        df.attrs["feature_source"] = "postgres"
+        return df
+
     feature_tuple = tuple(feature_columns)
     row_values = _get_cached_feature_row(normalized_address, feature_tuple)
     if row_values is None:
@@ -247,14 +260,19 @@ def _capture_live_feature_observation(address: str, feature_row: pd.DataFrame) -
         return
 
     try:
+        row = feature_row.iloc[0].to_dict()
+        features = {
+            column: safe_float(row.get(column, 0.0), 0.0, minimum=0.0)
+            for column in load_feature_columns()
+        }
+        save_live_feature_observation(validate_bitcoin_address(address).normalized, features)
+
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         record = {
             "observed_at": datetime.now(timezone.utc).isoformat(),
             "address": validate_bitcoin_address(address).normalized,
         }
-        row = feature_row.iloc[0].to_dict()
-        for column in load_feature_columns():
-            record[column] = safe_float(row.get(column, 0.0), 0.0, minimum=0.0)
+        record.update(features)
 
         output = pd.DataFrame([record])
         output.to_csv(
@@ -420,7 +438,7 @@ def predict_wallet(address: str) -> dict:
     cached_features = get_cached_features(normalized_address, feature_columns)
     if cached_features is not None:
         feature_row = cached_features
-        feature_source = "local_dataset"
+        feature_source = safe_text(cached_features.attrs.get("feature_source"), "local_dataset")
     else:
         try:
             feature_row = get_live_features(normalized_address, feature_columns)

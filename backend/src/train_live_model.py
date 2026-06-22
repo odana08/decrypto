@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 import os
+import sys
 
 import joblib
 import pandas as pd
@@ -8,9 +9,13 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score, precision_score, recall_score, roc_auc_score
 from sklearn.model_selection import train_test_split
 
-from feature_builder import LIVE_FEATURE_COLUMNS
-
 BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
+from src.database import load_labelled_live_frame_from_db, load_training_frame_from_db  # noqa: E402
+from src.feature_builder import LIVE_FEATURE_COLUMNS  # noqa: E402
+
 DATA_DIR = BASE_DIR / "data"
 MODELS_DIR = BASE_DIR / "models"
 
@@ -34,12 +39,20 @@ def _clean_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _load_base_training_frame() -> pd.DataFrame:
+    db_frame = load_training_frame_from_db()
+    if not db_frame.empty:
+        return _clean_columns(db_frame)
+
     features = _clean_columns(pd.read_csv(FEATURES_PATH))
     classes = _clean_columns(pd.read_csv(CLASSES_PATH))
     return features.merge(classes, on="address", how="inner")
 
 
 def _load_labelled_live_frame() -> pd.DataFrame:
+    db_frame = load_labelled_live_frame_from_db()
+    if not db_frame.empty:
+        return _clean_columns(db_frame)
+
     if not LIVE_OBSERVATIONS_PATH.exists() or not LIVE_LABELS_PATH.exists():
         return pd.DataFrame()
 

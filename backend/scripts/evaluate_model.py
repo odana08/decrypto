@@ -14,6 +14,11 @@ from sklearn.model_selection import train_test_split
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+
+from src.database import load_training_frame_from_db  # noqa: E402
+
 DATA_DIR = BACKEND_DIR / "data"
 MODELS_DIR = BACKEND_DIR / "models"
 
@@ -45,6 +50,18 @@ def _clean_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _load_labelled_dataset(feature_columns: List[str]) -> pd.DataFrame:
+    db_frame = load_training_frame_from_db()
+    if not db_frame.empty:
+        df = _clean_columns(db_frame)
+        df = df[df["class"].isin([1, 2])].copy()
+        missing = [column for column in feature_columns if column not in df.columns]
+        if missing:
+            _fail(f"Database training data is missing model feature columns: {missing}")
+        df["target"] = df["class"].map({1: 1, 2: 0})
+        for column in feature_columns:
+            df[column] = pd.to_numeric(df[column], errors="coerce").fillna(0.0)
+        return df
+
     if not FEATURES_PATH.exists():
         _fail(f"Missing model feature data: {FEATURES_PATH}")
     if not CLASSES_PATH.exists():

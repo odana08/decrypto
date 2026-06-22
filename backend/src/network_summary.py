@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Set
 
 import pandas as pd
 
+from src.database import load_network_dataset_from_db, stream_addraddr_edge_chunks, table_counts
 from src.predict_wallet import load_feature_columns, load_model
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -35,6 +36,9 @@ def _clean_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _required_files_present() -> bool:
+    counts = table_counts()
+    if counts.get("wallet_features", 0) > 0 and counts.get("wallet_labels", 0) > 0:
+        return True
     return FEATURES_PATH.exists() and CLASSES_PATH.exists() and EDGE_PATH.exists()
 
 
@@ -75,6 +79,16 @@ def _feature_store_column_map() -> Dict[str, str]:
     return dict(zip(clean_header.columns, header.columns))
 
 
+def _edge_chunks(seed_set: Set[str]):
+    counts = table_counts()
+    if counts.get("addraddr_edges", 0) > 0:
+        yield from stream_addraddr_edge_chunks(seed_set)
+        return
+
+    if EDGE_PATH.exists():
+        yield from pd.read_csv(EDGE_PATH, chunksize=50_000)
+
+
 def _model_feature_frame(df: pd.DataFrame, feature_columns: List[str]) -> pd.DataFrame:
     feature_frame = df.copy()
     for column in feature_columns:
@@ -113,6 +127,14 @@ def _score_dataset_with_model(df: pd.DataFrame, feature_columns: List[str]) -> p
 @lru_cache(maxsize=1)
 def load_network_dataset() -> pd.DataFrame:
     feature_columns = load_feature_columns()
+    db_df = load_network_dataset_from_db(feature_columns, RAW_FEATURE_COLUMNS)
+    if not db_df.empty:
+        df = _clean_columns(db_df)
+        df["dataset_class_label"] = df["class"].map(_class_label)
+        df = _score_dataset_with_model(df, feature_columns)
+        df["primary_flag"] = df.apply(_primary_flag, axis=1)
+        return df
+
     column_map = _feature_store_column_map()
     requested_columns = ["address"]
     for column in sorted(set(feature_columns + RAW_FEATURE_COLUMNS)):
@@ -187,7 +209,7 @@ def _build_graph(
     seen_edges: Set[tuple[str, str]] = set()
     neighbor_counts: Dict[str, int] = {address: 0 for address in seed_set}
 
-    for chunk in pd.read_csv(EDGE_PATH, chunksize=50_000):
+    for chunk in _edge_chunks(seed_set):
         chunk = _clean_columns(chunk)
         relevant = chunk[
             chunk["input_address"].isin(seed_set) | chunk["output_address"].isin(seed_set)

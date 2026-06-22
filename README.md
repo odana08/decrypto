@@ -123,6 +123,7 @@ Because the dataset and `.joblib` artifact are usually private or too large for 
 MODEL_DATA_ARCHIVE_URL       # zip containing wallets_features.csv and wallets_classes.csv
 MODEL_ARTIFACT_ARCHIVE_URL   # zip containing btc_live_random_forest.joblib
 LIVE_TRAINING_ARCHIVE_URL    # optional zip containing labelled live observations
+DATABASE_URL                 # optional Postgres connection string for DB-backed training/evaluation
 ```
 
 The default model thresholds are:
@@ -147,7 +148,45 @@ Live-address retraining works in three stages:
 2. A human or trusted process labels those addresses in `backend/data/live_wallet_labels.csv` using `class=1` for illicit and `class=2` for licit. See `backend/data/live_wallet_labels.example.csv`.
 3. The training workflow merges labelled live observations with the base dataset, retrains the classifier, evaluates ROC AUC / accuracy / illicit precision / illicit recall / F1, and writes SHAP-ranked global feature drivers to `backend/models/btc_live_shap_feature_importance.csv`.
 
-Unlabelled live observations are intentionally not used for supervised retraining. In production, store `live_wallet_feature_observations.csv` on a persistent Railway volume or export it into the archive referenced by `LIVE_TRAINING_ARCHIVE_URL`.
+Unlabelled live observations are intentionally not used for supervised retraining. In production, prefer PostgreSQL for live observations and stored dataset features. CSV archives remain supported as a fallback.
+
+### PostgreSQL Data Store
+
+Production can use PostgreSQL instead of large CSV files. When `DATABASE_URL` is configured, the backend checks Postgres first:
+
+```text
+wallet_features table hit -> score stored dataset features
+wallet_features table miss -> build live mempool.space features
+live feature row -> append to live_wallet_feature_observations
+```
+
+Initialize the schema:
+
+```bash
+cd backend
+python scripts/init_database.py
+```
+
+Import local CSV data into Postgres:
+
+```bash
+cd backend
+python scripts/import_csv_to_postgres.py --skip-edges
+```
+
+Remove `--skip-edges` if you also want to import `AddrAddr_edgelist.csv` for database-backed network summary edges.
+
+The database tables are:
+
+```text
+wallet_features
+wallet_labels
+live_wallet_feature_observations
+address_watchlist
+addraddr_edges
+```
+
+On Railway, add a PostgreSQL service, copy its connection string into the backend service as `DATABASE_URL`, then run the importer once from a machine that has access to the local CSV files.
 
 The trained model is stored with Git LFS because `backend/models/btc_live_random_forest.joblib` is too large for normal Git storage. Before committing the model locally, run:
 
@@ -199,6 +238,7 @@ The backend workflow triggers the Railway deploy hook for the FastAPI service. T
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `GEMINI_API_KEY` | No | Google Gemini key for AI wallet summaries |
+| `DATABASE_URL` | No | PostgreSQL connection string. When set, the backend uses Postgres before CSV files |
 | `CAPTURE_LIVE_FEATURES` | No | Set to `false` to stop appending unseen live-wallet feature rows to `backend/data/live_wallet_feature_observations.csv` |
 | `SHAP_SAMPLE_SIZE` | No | Number of training rows sampled for global SHAP feature importance during retraining, default `5000` |
 
@@ -209,6 +249,6 @@ The backend workflow triggers the Railway deploy hook for the FastAPI service. T
 | Layer | Technology |
 |-------|-----------|
 | Frontend | React 19, Vite 8, TailwindCSS 3.4, react-force-graph-2d, Recharts, Framer Motion |
-| Backend | FastAPI, Uvicorn, pandas, scikit-learn, joblib, requests, python-dotenv |
-| Data sources | mempool.space Bitcoin API, Elliptic dataset, Google Gemini AI |
+| Backend | FastAPI, Uvicorn, pandas, scikit-learn, joblib, psycopg, requests, python-dotenv |
+| Data sources | PostgreSQL, mempool.space Bitcoin API, Elliptic dataset, Google Gemini AI |
 | Chain | Bitcoin (mainnet) |

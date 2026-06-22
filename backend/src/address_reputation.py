@@ -6,6 +6,7 @@ import json
 from typing import Any, Dict, Optional
 
 from src.btc_address import validate_bitcoin_address
+from src.database import fetch_watchlist_entry
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
@@ -40,4 +41,7 @@ def lookup_address_reputation(address: str) -> Optional[Dict[str, Any]]:
         normalized_address = validate_bitcoin_address(address).normalized
     except Exception:
         return None
+    db_match = fetch_watchlist_entry(normalized_address)
+    if db_match:
+        return db_match
     return load_address_watchlist().get(normalized_address)
