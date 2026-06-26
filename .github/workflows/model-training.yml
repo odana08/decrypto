@@ -76,11 +76,10 @@ jobs:
           unzip -o /tmp/live-training-data.zip -d backend/data
 
       - name: Train classifier
-        working-directory: backend
-        run: python src/train_live_model.py
+        run: PYTHONPATH=backend python backend/src/train_live_model.py
 
       - name: Evaluate classifier
-        run: python backend/scripts/evaluate_model.py
+        run: PYTHONPATH=backend python backend/scripts/evaluate_model.py
 
       - name: Upload model artifacts
         uses: actions/upload-artifact@v4
