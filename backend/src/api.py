@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from src.analysis_cache import redis_health
 from src.analysis_contracts import build_analysis_contract, build_empty_graph, empty_feature_map
 from src.analysis_errors import WalletAnalysisError
 from src.database import init_schema, table_counts
@@ -128,7 +129,7 @@ def warm_backend_caches():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "database": table_counts()}
+    return {"status": "ok", "database": table_counts(), "redis": redis_health()}
 
 
 @app.get("/graph/{address}")

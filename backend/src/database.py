@@ -57,6 +57,8 @@ CREATE INDEX IF NOT EXISTS idx_addraddr_edges_input ON addraddr_edges (input_add
 CREATE INDEX IF NOT EXISTS idx_addraddr_edges_output ON addraddr_edges (output_address);
 """
 
+DEFAULT_DATABASE_CONNECT_TIMEOUT_SECONDS = 3
+
 
 def get_database_url() -> str:
     return (
@@ -71,12 +73,31 @@ def database_enabled() -> bool:
     return bool(get_database_url())
 
 
+def _database_connect_timeout_seconds() -> int:
+    try:
+        return max(
+            1,
+            int(
+                os.getenv(
+                    "DATABASE_CONNECT_TIMEOUT_SECONDS",
+                    str(DEFAULT_DATABASE_CONNECT_TIMEOUT_SECONDS),
+                )
+            ),
+        )
+    except (TypeError, ValueError):
+        return DEFAULT_DATABASE_CONNECT_TIMEOUT_SECONDS
+
+
 @contextmanager
 def connect() -> Iterator[psycopg.Connection]:
     url = get_database_url()
     if not url:
         raise RuntimeError("DATABASE_URL is not configured.")
-    with psycopg.connect(url, row_factory=dict_row) as connection:
+    with psycopg.connect(
+        url,
+        row_factory=dict_row,
+        connect_timeout=_database_connect_timeout_seconds(),
+    ) as connection:
         yield connection
 
 

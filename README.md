@@ -188,6 +188,29 @@ addraddr_edges
 
 On Railway, add a PostgreSQL service, copy its connection string into the backend service as `DATABASE_URL`, then run the importer once from a machine that has access to the local CSV files.
 
+Set `DATABASE_CONNECT_TIMEOUT_SECONDS` to a low value such as `3` in production so wallet analysis can fall back quickly if Postgres is unavailable.
+
+### Redis Analysis Cache
+
+Redis caches the complete wallet-analysis response without changing the underlying workflow:
+
+```text
+wallet request
+-> Redis hit: return the complete cached analysis
+-> Redis miss: run Postgres/CSV/mempool + model + graph analysis
+-> store the complete result in Redis
+```
+
+Configure `REDIS_URL` on the backend service. Cache keys include a version:
+
+```text
+wallet-analysis:<version>:<bitcoin-address>
+```
+
+Set `ANALYSIS_CACHE_VERSION` to a new value when model artifacts, feature-building logic, or watchlist behavior changes. `RAILWAY_GIT_COMMIT_SHA` is used automatically when available. The default TTL is 900 seconds and can be changed with `ANALYSIS_CACHE_TTL_SECONDS`.
+
+Redis is optional. If it is missing or unavailable, wallet analysis continues normally.
+
 The trained model is stored with Git LFS because `backend/models/btc_live_random_forest.joblib` is too large for normal Git storage. Before committing the model locally, run:
 
 ```bash
@@ -239,6 +262,10 @@ The backend workflow triggers the Railway deploy hook for the FastAPI service. T
 |----------|----------|-------------|
 | `GEMINI_API_KEY` | No | Google Gemini key for AI wallet summaries |
 | `DATABASE_URL` | No | PostgreSQL connection string. When set, the backend uses Postgres before CSV files |
+| `DATABASE_CONNECT_TIMEOUT_SECONDS` | No | Postgres connection timeout before fallback, default `3` seconds |
+| `REDIS_URL` | No | Redis connection string used to cache complete wallet-analysis responses |
+| `ANALYSIS_CACHE_VERSION` | No | Cache namespace version; change it to invalidate results after model or feature updates |
+| `ANALYSIS_CACHE_TTL_SECONDS` | No | Complete wallet-analysis cache lifetime, default `900` seconds |
 | `CAPTURE_LIVE_FEATURES` | No | Set to `false` to stop appending unseen live-wallet feature rows to `backend/data/live_wallet_feature_observations.csv` |
 | `SHAP_SAMPLE_SIZE` | No | Number of training rows sampled for global SHAP feature importance during retraining, default `5000` |
 
@@ -249,6 +276,6 @@ The backend workflow triggers the Railway deploy hook for the FastAPI service. T
 | Layer | Technology |
 |-------|-----------|
 | Frontend | React 19, Vite 8, TailwindCSS 3.4, react-force-graph-2d, Recharts, Framer Motion |
-| Backend | FastAPI, Uvicorn, pandas, scikit-learn, joblib, psycopg, requests, python-dotenv |
-| Data sources | PostgreSQL, mempool.space Bitcoin API, Elliptic dataset, Google Gemini AI |
+| Backend | FastAPI, Uvicorn, Redis, PostgreSQL, pandas, scikit-learn, joblib, requests |
+| Data sources | Redis cache, PostgreSQL, mempool.space Bitcoin API, Elliptic dataset, Google Gemini AI |
 | Chain | Bitcoin (mainnet) |

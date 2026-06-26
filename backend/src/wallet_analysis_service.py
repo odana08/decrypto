@@ -5,6 +5,7 @@ from functools import lru_cache
 import time
 from typing import Dict
 
+from src.analysis_cache import get_cached_wallet_analysis, set_cached_wallet_analysis
 from src.analysis_contracts import build_analysis_contract
 from src.btc_address import validate_bitcoin_address
 from src.graph_builder import build_wallet_graph
@@ -42,6 +43,11 @@ def _analyze_wallet_cached(address: str, bucket: int) -> Dict[str, object]:
 
 def analyze_wallet(address: str) -> Dict[str, object]:
     normalized_address = validate_bitcoin_address(address).normalized
-    result = _analyze_wallet_cached(normalized_address, _cache_bucket(ANALYSIS_CACHE_TTL_SECONDS))
-    return deepcopy(result)
 
+    redis_result = get_cached_wallet_analysis(normalized_address)
+    if redis_result is not None:
+        return deepcopy(redis_result)
+
+    result = _analyze_wallet_cached(normalized_address, _cache_bucket(ANALYSIS_CACHE_TTL_SECONDS))
+    set_cached_wallet_analysis(normalized_address, result)
+    return deepcopy(result)

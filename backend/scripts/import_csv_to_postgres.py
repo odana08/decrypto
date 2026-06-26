@@ -46,7 +46,31 @@ def _batched(values: List[tuple], size: int) -> Iterable[List[tuple]]:
         yield values[index:index + size]
 
 
-def import_features(chunk_size: int) -> None:
+FEATURE_INSERT_SQL = """
+INSERT INTO wallet_features (address, features, source)
+VALUES (%s, %s, %s)
+ON CONFLICT (address) DO UPDATE SET
+    features = EXCLUDED.features,
+    source = EXCLUDED.source,
+    updated_at = now()
+"""
+
+LABEL_INSERT_SQL = """
+INSERT INTO wallet_labels (address, class, source)
+VALUES (%s, %s, %s)
+ON CONFLICT (address) DO UPDATE SET
+    class = EXCLUDED.class,
+    source = EXCLUDED.source,
+    updated_at = now()
+"""
+
+EDGE_INSERT_SQL = """
+INSERT INTO addraddr_edges (input_address, output_address, source)
+VALUES (%s, %s, %s)
+"""
+
+
+def import_features(chunk_size: int, batch_size: int) -> None:
     if not FEATURES_PATH.exists():
         print(f"Skipping missing {FEATURES_PATH}")
         return
@@ -63,23 +87,14 @@ def import_features(chunk_size: int) -> None:
                 rows.append((address, Jsonb(_clean_feature_record(record)), "elliptic"))
 
             with connection.cursor() as cursor:
-                cursor.executemany(
-                    """
-                    INSERT INTO wallet_features (address, features, source)
-                    VALUES (%s, %s, %s)
-                    ON CONFLICT (address) DO UPDATE SET
-                        features = EXCLUDED.features,
-                        source = EXCLUDED.source,
-                        updated_at = now()
-                    """,
-                    rows,
-                )
-            connection.commit()
+                for batch in _batched(rows, batch_size):
+                    cursor.executemany(FEATURE_INSERT_SQL, batch)
+                    connection.commit()
             total += len(rows)
             print(f"Imported {total:,} wallet feature rows")
 
 
-def import_labels(chunk_size: int) -> None:
+def import_labels(chunk_size: int, batch_size: int) -> None:
     if not CLASSES_PATH.exists():
         print(f"Skipping missing {CLASSES_PATH}")
         return
@@ -96,18 +111,9 @@ def import_labels(chunk_size: int) -> None:
                 rows.append((address, int(record.get("class", 3)), "elliptic"))
 
             with connection.cursor() as cursor:
-                cursor.executemany(
-                    """
-                    INSERT INTO wallet_labels (address, class, source)
-                    VALUES (%s, %s, %s)
-                    ON CONFLICT (address) DO UPDATE SET
-                        class = EXCLUDED.class,
-                        source = EXCLUDED.source,
-                        updated_at = now()
-                    """,
-                    rows,
-                )
-            connection.commit()
+                for batch in _batched(rows, batch_size):
+                    cursor.executemany(LABEL_INSERT_SQL, batch)
+                    connection.commit()
             total += len(rows)
             print(f"Imported {total:,} wallet label rows")
 
@@ -164,22 +170,16 @@ def import_edges(chunk_size: int, batch_size: int) -> None:
 
             with connection.cursor() as cursor:
                 for batch in _batched(rows, batch_size):
-                    cursor.executemany(
-                        """
-                        INSERT INTO addraddr_edges (input_address, output_address, source)
-                        VALUES (%s, %s, %s)
-                        """,
-                        batch,
-                    )
-            connection.commit()
+                    cursor.executemany(EDGE_INSERT_SQL, batch)
+                    connection.commit()
             total += len(rows)
             print(f"Imported {total:,} address edge rows")
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Import local CSV datasets into Postgres.")
-    parser.add_argument("--chunk-size", type=int, default=25_000)
-    parser.add_argument("--batch-size", type=int, default=5_000)
+    parser.add_argument("--chunk-size", type=int, default=5_000)
+    parser.add_argument("--batch-size", type=int, default=1_000)
     parser.add_argument("--skip-edges", action="store_true", help="Skip importing AddrAddr_edgelist.csv.")
     return parser.parse_args()
 
@@ -190,8 +190,8 @@ def main() -> None:
 
     args = parse_args()
     init_schema()
-    import_features(args.chunk_size)
-    import_labels(args.chunk_size)
+    import_features(args.chunk_size, args.batch_size)
+    import_labels(args.chunk_size, args.batch_size)
     import_watchlist()
     if not args.skip_edges:
         import_edges(args.chunk_size, args.batch_size)

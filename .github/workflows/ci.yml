@@ -31,6 +31,15 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     env:
       DATABASE_URL: postgresql://decrypto:decrypto@localhost:5432/decrypto_test
@@ -59,6 +68,12 @@ jobs:
 
       - name: Verify Postgres schema
         run: python backend/scripts/init_database.py
+
+      - name: Verify Redis connectivity
+        env:
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          python -c "from redis import Redis; client = Redis.from_url('$REDIS_URL'); assert client.ping()"
 
       - name: Run backend tests
         run: PYTHONPATH=backend pytest backend/tests
